@@ -102,7 +102,7 @@ $nativeView = file_get_contents(__DIR__ . '/../Resources/views/reports/capital-s
 check(str_contains($nativeView, 'title="Pend."')
     && str_contains($nativeView, 'aria-label="{{ $member[\'pending\'] }} {{ $member[\'pending\'] === 1 ? \'pendência\' : \'pendências\' }}"'),
     'Compact pending indicator retains accessible numeric count'); ++$tests;
-check(str_contains($nativeView, 'style="min-width: 1140px;"')
+check(str_contains($nativeView, 'style="min-width: 1280px;"')
     && !str_contains($nativeView, ' pendente(s)</span>'),
     'Pending column avoids long repeated text and cramped widths'); ++$tests;
 $reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
@@ -175,4 +175,38 @@ check($warningOnly['members'][0]['pending']===0 && $warningOnly['members'][0]['w
 check($warningOnly['total_cents']===6250,'Confirmed with warning contributes to capital'); ++$tests;
 check(CapitalSocialReview::label(['status'=>'confirmado','reason'=>'Source audit'])==='Confirmada com ressalva',
     'Confirmed warning has explicit presentation'); ++$tests;
+
+$recent = CapitalSocialSummary::calculate([
+    ['identity'=>'contact:101','name'=>'Synthetic A','contact_id'=>101,
+     'kind'=>'integralizacao','amount_cents'=>10000,'status'=>'confirmado',
+     'date'=>'2026-05-01','reason'=>''],
+    ['identity'=>'contact:101','name'=>'Synthetic A','contact_id'=>101,
+     'kind'=>'retencao','amount_cents'=>6250,'status'=>'confirmado',
+     'date'=>'2026-07-15','reason'=>''],
+    ['identity'=>'contact:101','name'=>'Synthetic A','contact_id'=>101,
+     'kind'=>'revisao','amount_cents'=>0,'status'=>'revisar',
+     'date'=>'2026-11-11','reason'=>'Unpaid'],
+    ['identity'=>'contact:101','name'=>'Synthetic A','contact_id'=>101,
+     'kind'=>'devolucao','amount_cents'=>-1000,'status'=>'confirmado',
+     'date'=>'2026-10-02','reason'=>''],
+    ['identity'=>'contact:102','name'=>'Synthetic B','contact_id'=>102,
+     'kind'=>'revisao','amount_cents'=>0,'status'=>'revisar',
+     'date'=>'2026-11-11','reason'=>'Unpaid'],
+]);
+check($recent['members'][0]['last_contribution_date']==='2026-07-15',
+    'Last confirmed contribution includes retention, excludes unpaid and refunds'); ++$tests;
+check($recent['members'][1]['last_contribution_date']===null,
+    'Unpaid candidate is not a confirmed activity marker'); ++$tests;
+check($recent['total_cents']===15250,
+    'Recency metrics do not alter the financial balance'); ++$tests;
+$recentSorted=CapitalSocialSorter::sort($recent['members'],'overview','last_contribution_date','desc');
+check($recentSorted[0]['contact_id']===101,'Native last-contribution order prioritizes recent confirmed activity'); ++$tests;
+check(str_contains($reportSource, "'attributes' => []"),
+    'Native report field must supply an attributes array to the edit template'); ++$tests;
+check(str_contains($reportSource, "model->settings->view"),
+    'Editing the saved view changes the default report presentation'); ++$tests;
+check(str_contains($reportSource, "'any' => 'Qualquer pendência ou ressalva'"),
+    'Native member filter must include all kinds of review'); ++$tests;
+check(str_contains($reportSource, "'login_status'"),
+    'Login access is a separate, explicit filter from cooperative membership'); ++$tests;
 echo "$tests business invariants passed\n";

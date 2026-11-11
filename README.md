@@ -84,3 +84,24 @@ customer data, or machine identifiers.
 ## License
 
 AGPL-3.0-or-later. See `LICENSE` and `LICENSES/AGPL-3.0-or-later.txt`.
+
+## Native report editing and financial activity
+
+The native Akaunting report editor supports changing the report name, description
+and default view. Fields used there must include the standard attributes
+array expected by the core report form. Changing the default view does not
+alter the financial ledger or any per-company capital classification.
+
+The member overview offers Any pending or audit reservation, plus the
+individual categories, and shows a sortable latest confirmed contribution
+date. Its activity filter covers the last 90, 180 or 365 days, or no
+contribution in the last 365 days. These are precisely financial activity
+signals, not proof that cooperative membership is legally active or inactive.
+
+An independent Akaunting login filter distinguishes linked users enabled for
+this company, disabled/unassigned users and contacts without a linked user.
+The report does not provision, enable or disable accounts. The standard
+Akaunting customer portal exposes customer sales invoices, not vendor bills
+or cooperative production documents. Granting access to the latter requires
+a separate own-record authorization design and negative cross-user tests;
+do not grant a broad administration role as a workaround.

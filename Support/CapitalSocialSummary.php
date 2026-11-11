@@ -32,6 +32,7 @@ final class CapitalSocialSummary
                 'direct_cents' => 0,
                 'retained_cents' => 0,
                 'devolvido_cents' => 0,
+                'last_contribution_date' => null,
                 'saldo_cents' => 0,
                 'pending' => 0,
                 'warnings' => 0,
@@ -47,6 +48,14 @@ final class CapitalSocialSummary
             $amount = (int) $row['amount_cents'];
             $kind = (string) ($row['kind'] ?? ($amount >= 0 ? 'integralizacao' : 'devolucao'));
             if ($amount >= 0) {
+                if ($amount > 0 && in_array($kind, ['integralizacao', 'retencao'], true)) {
+                    // This is financial activity, not proof of active membership.
+                    $date = (string) ($row['date'] ?? '');
+                    if ($date !== '' && ($members[$key]['last_contribution_date'] === null
+                        || strcmp($date, $members[$key]['last_contribution_date']) > 0)) {
+                        $members[$key]['last_contribution_date'] = $date;
+                    }
+                }
                 $members[$key]['integralizado_cents'] += $amount;
                 if ($kind === 'retencao') {
                     $members[$key]['retained_cents'] += $amount;

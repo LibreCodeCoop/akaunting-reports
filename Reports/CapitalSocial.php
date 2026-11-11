@@ -46,6 +46,8 @@ final class CapitalSocial extends Report
     public ?string $selectedKind = null;
     public ?string $selectedReviewReason = null;
     public ?string $selectedMemberReview = null;
+    public ?string $selectedRecentContribution = null;
+    public ?string $selectedLoginStatus = null;
     /** @var list<array<string,mixed>> */
     public array $sortedMembers = [];
     /** @var array{confirmed:int,awaiting_payment:int,requires_review:int} */
@@ -79,8 +81,11 @@ final class CapitalSocial extends Report
             'name' => 'view',
             'title' => 'Visualização',
             'values' => ['overview' => 'Por cooperado', 'ledger' => 'Extrato'],
-            'selected' => 'overview',
+            'selected' => in_array($this->model->settings->view ?? null, ['overview', 'ledger'], true)
+                ? $this->model->settings->view : 'overview',
             'placement' => 'strip',
+            // Required by the stock report create/edit Blade form.
+            'attributes' => [],
         ]];
     }
 
@@ -91,7 +96,9 @@ final class CapitalSocial extends Report
         $this->filters['view'] = ['overview' => 'Por cooperado', 'ledger' => 'Extrato'];
         $this->filters['keys']['view'] = 'view';
         $this->filters['names']['view'] = 'Visualização';
-        $this->filters['defaults']['view'] = 'overview';
+        $savedView = (string) ($this->model->settings->view ?? 'overview');
+        $this->filters['defaults']['view'] = in_array($savedView, ['overview', 'ledger'], true)
+            ? $savedView : 'overview';
 
         $today = Date::today();
         $options = [
@@ -118,7 +125,13 @@ final class CapitalSocial extends Report
             throw new \RuntimeException('An active company is required.');
         }
 
-        $this->tab = $this->getSearchStringValue('view') === 'ledger' ? 'ledger' : 'overview';
+        $search = request()->query('search', '');
+        $viewWasSelected = is_string($search)
+            && preg_match('/(?:^|\\s)view:(?:overview|ledger)(?:\\s|$)/', $search) === 1;
+        $requestedView = $viewWasSelected ? $this->getSearchStringValue('view') : null;
+        $savedView = (string) ($this->model->settings->view ?? 'overview');
+        $effectiveView = $requestedView ?? $savedView;
+        $this->tab = $effectiveView === 'ledger' ? 'ledger' : 'overview';
         $this->asOf = $this->getAsOfDate()->toDateString();
 
         $settings = DB::table('settings')->where('company_id', $companyId)
@@ -230,6 +243,7 @@ final class CapitalSocial extends Report
             $this->movementPages = $this->paginate($this->movements, 25);
         } else {
             $this->filters['member_review'] = [
+                'any' => 'Qualquer pendência ou ressalva',
                 'pending' => 'Com valores não confirmados',
                 'warning' => 'Com ressalvas',
                 'clear' => 'Sem pendências ou ressalvas',
@@ -240,15 +254,100 @@ final class CapitalSocial extends Report
             $this->selectedMemberReview = is_string($memberReview)
                 && isset($this->filters['member_review'][$memberReview])
                 ? $memberReview : null;
+            $this->filters['recent_contribution'] = [
+                '90' => 'Integralizou nos últimos 90 dias',
+                '180' => 'Integralizou nos últimos 180 dias',
+                '365' => 'Integralizou nos últimos 365 dias',
+                'older' => 'Sem integralização nos últimos 365 dias',
+            ];
+            $this->filters['keys']['recent_contribution'] = 'recent_contribution';
+            $this->filters['names']['recent_contribution'] = 'Atividade financeira';
+            $recent = $this->getSearchStringValue('recent_contribution');
+            $this->selectedRecentContribution = is_string($recent)
+                && isset($this->filters['recent_contribution'][$recent])
+                ? $recent : null;
+            $asOf = Date::parse($this->asOf);
+            $cutoffs = [
+                '90' => $asOf->copy()->subDays(90)->toDateString(),
+                '180' => $asOf->copy()->subDays(180)->toDateString(),
+                '365' => $asOf->copy()->subDays(365)->toDateString(),
+            ];
+            // This shows a real, company-scoped Akaunting account association.
+            // A login being enabled is NOT proof of active cooperative membership.
+            $contactIds = array_column($this->capitalSummary['members'], 'contact_id');
+            $linkedLogins = empty($contactIds)
+                ? collect()
+                : DB::table('contacts as contact')
+                    ->leftJoin('users as account', 'account.id', '=', 'contact.user_id')
+                    ->leftJoin('user_companies as membership', function ($join) use ($companyId): void {
+                        $join->on('membership.user_id', '=', 'account.id')
+                            ->where('membership.company_id', '=', $companyId);
+                    })
+                    ->where('contact.company_id', $companyId)
+                    ->whereIn('contact.id', $contactIds)
+                    ->select(
+                        'contact.id as contact_id', 'contact.user_id',
+                        'account.enabled as account_enabled',
+                        'account.deleted_at as account_deleted',
+                        'membership.user_id as assigned_user_id'
+                    )
+                    ->get()->keyBy('contact_id');
+            $membersWithAccess = [];
+            foreach ($this->capitalSummary['members'] as $member) {
+                $linked = $linkedLogins->get($member['contact_id']);
+                $member['login_status'] = !$linked || !$linked->user_id
+                    ? 'unlinked'
+                    : (($linked->account_enabled && !$linked->account_deleted && $linked->assigned_user_id)
+                        ? 'enabled' : 'disabled');
+                $membersWithAccess[] = $member;
+            }
+            $this->filters['login_status'] = [
+                'enabled' => 'Usuário habilitado nesta empresa',
+                'disabled' => 'Usuário desabilitado ou sem acesso à empresa',
+                'unlinked' => 'Sem usuário vinculado ao contato',
+            ];
+            $this->filters['keys']['login_status'] = 'login_status';
+            $this->filters['names']['login_status'] = 'Acesso ao Akaunting';
+            $login = $this->getSearchStringValue('login_status');
+            $this->selectedLoginStatus = is_string($login)
+                && isset($this->filters['login_status'][$login])
+                ? $login : null;
+
             $members = array_values(array_filter(
-                $this->capitalSummary['members'],
-                fn (array $member): bool => match ($this->selectedMemberReview) {
-                    'pending' => $member['pending'] > 0,
-                    'warning' => $member['warnings'] > 0,
-                    'clear' => $member['pending'] === 0 && $member['warnings'] === 0,
-                    default => true,
+                $membersWithAccess,
+                function (array $member) use ($cutoffs): bool {
+                    $hasReview = match ($this->selectedMemberReview) {
+                        'any' => $member['pending'] > 0 || $member['warnings'] > 0,
+                        'pending' => $member['pending'] > 0,
+                        'warning' => $member['warnings'] > 0,
+                        'clear' => $member['pending'] === 0 && $member['warnings'] === 0,
+                        default => true,
+                    };
+                    $last = $member['last_contribution_date'];
+                    $hasActivity = match ($this->selectedRecentContribution) {
+                        '90', '180', '365' => $last !== null
+                            && $last >= $cutoffs[$this->selectedRecentContribution],
+                        'older' => $last === null || $last < $cutoffs['365'],
+                        default => true,
+                    };
+
+                    $hasAccess = $this->selectedLoginStatus === null
+                        || $member['login_status'] === $this->selectedLoginStatus;
+
+                    return $hasReview && $hasActivity && $hasAccess;
                 }
             ));
+            if ($this->selectedMemberReview !== null || $this->selectedRecentContribution !== null
+                || $this->selectedLoginStatus !== null) {
+                // Financial indicators must reflect the same selection as the table.
+                $allowed = array_fill_keys(array_column($members, 'identity'), true);
+                $selectedMovements = array_values(array_filter(
+                    $this->movements,
+                    static fn (array $row): bool => isset($allowed[(string) $row['identity']])
+                ));
+                $this->capitalSummary = CapitalSocialSummary::calculate($selectedMovements);
+                $this->reviewCounts = CapitalSocialReview::counts($selectedMovements);
+            }
             // Match Akaunting's sortable links: the initially selected order
             // must be visible in the column header, not only applied internally.
             // Only set a default when the user has not selected any column.
@@ -282,7 +381,7 @@ final class CapitalSocial extends Report
         $search = request()->query('search', '');
         $tokens = is_string($search) ? preg_split('/\s+/', trim($search)) : [];
         $tokens = array_values(array_filter($tokens ?: [], static function (string $token) use ($tab, $status): bool {
-            if (preg_match('/^(view|member|member_review):/', $token)) {
+            if (preg_match('/^(view|member|member_review|recent_contribution|login_status):/', $token)) {
                 return false;
             }
             if ($tab !== 'ledger' && preg_match('/^(kind|status|review_reason):/', $token)) {
@@ -320,7 +419,7 @@ final class CapitalSocial extends Report
                 throw new \RuntimeException('Cannot open export stream.');
             }
             if ($this->tab === 'overview') {
-                fputcsv($out, ['Cooperado', 'Integralização direta (BRL)', 'Retenções (BRL)', 'Devoluções (BRL)', 'Saldo (BRL)', 'Pendências']);
+                fputcsv($out, ['Cooperado', 'Integralização direta (BRL)', 'Retenções (BRL)', 'Devoluções (BRL)', 'Saldo (BRL)', 'Última integralização confirmada', 'Pendências']);
                 foreach ($this->sortedMembers as $member) {
                     fputcsv($out, [
                         self::safeCsv((string) $member['name']),
@@ -328,6 +427,7 @@ final class CapitalSocial extends Report
                         self::decimal((int) $member['retained_cents']),
                         self::decimal((int) $member['devolvido_cents']),
                         self::decimal((int) $member['saldo_cents']),
+                        (string) ($member['last_contribution_date'] ?? ''),
                         (int) $member['pending'],
                     ]);
                 }

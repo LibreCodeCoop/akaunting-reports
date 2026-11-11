@@ -13,7 +13,7 @@ namespace Modules\AkauntingReports\Support;
  */
 final class CapitalSocialSorter
 {
-    private const OVERVIEW = ['name', 'direct_cents', 'retained_cents', 'devolvido_cents', 'saldo_cents', 'pending'];
+    private const OVERVIEW = ['name', 'direct_cents', 'retained_cents', 'devolvido_cents', 'saldo_cents', 'last_contribution_date', 'pending'];
     private const LEDGER = ['date', 'name', 'kind', 'amount_cents', 'running_balance_cents', 'status', 'source'];
     private const NUMERIC = ['direct_cents', 'retained_cents', 'devolvido_cents', 'saldo_cents', 'pending', 'amount_cents', 'running_balance_cents'];
 

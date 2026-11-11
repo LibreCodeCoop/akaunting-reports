@@ -115,12 +115,13 @@
                 <div>
                     <h3 class="text-lg font-semibold text-black-400">Capital por cooperado</h3>
                     <p class="mt-1 text-sm text-gray-500">Clique em um cooperado para abrir seu extrato. Ordene por qualquer coluna ou use a barra nativa de filtros acima.</p>
+                    <p class="mt-1 text-xs text-gray-500">Última integralização indica atividade financeira confirmada, não situação cadastral de cooperado ativo.</p>
                 </div>
                 <span class="text-sm text-gray-500">{{ count($class->sortedMembers) }} cooperados encontrados</span>
             </div>
 
             <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1140px;">
+                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1280px;">
                     <x-table.thead>
                         <x-table.tr>
                             <x-table.th class="w-3/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
@@ -128,6 +129,7 @@
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="retained_cents" title="Retenção na produção" /></x-table.th>
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
+                            <x-table.th class="w-2/12"><x-sortablelink column="last_contribution_date" title="Última integralização" /></x-table.th>
                             <x-table.th class="w-1/12" title="Pendências não confirmadas"><x-sortablelink column="pending" title="Pend." :arguments="['title' => 'Ordenar por pendências']" /></x-table.th>
                         </x-table.tr>
                     </x-table.thead>
@@ -142,6 +144,10 @@
                                 <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</x-table.td>
                                 <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
                                 <x-table.td kind="amount" class="w-2/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
+                                <x-table.td class="w-2/12 whitespace-nowrap">
+                                    {{ $member['last_contribution_date'] !== null
+                                        ? company_date($member['last_contribution_date']) : '—' }}
+                                </x-table.td>
                                 <x-table.td class="w-1/12">
                                     <span class="inline-flex items-center gap-1 whitespace-nowrap">
                                         @if ($member['pending'] > 0)

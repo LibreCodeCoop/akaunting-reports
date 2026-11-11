@@ -73,3 +73,18 @@ descending, so unconfirmed items are visible on the first page. Native sortable
 links permit all supported alternate orders. Pending counts and audit-warning
 counts remain separate, and the narrow column displays compact numeric indicators
 with accessible labels rather than repeated verbose prose.
+
+## Historical activity, membership and account security
+
+Activity based on the most recent confirmed positive capital movement
+(including withholdings on settled production bills) is a financial proxy.
+It must never be labelled official active/inactive membership. Confirmed
+refunds, unpaid drafts and unconfirmed candidate movements do not advance the
+last-contribution date.
+
+Filters for enabled Akaunting users use only explicitly linked contact.user_id
+records with user-company assignment. They do not prove cooperative membership.
+Contacts with matching e-mail but no verified link must remain unlinked. Never
+provision new accounts, re-enable existing accounts or assign financial
+permissions based on presence in this report; a separate member-only portal
+must enforce authenticated own-contact scoping.

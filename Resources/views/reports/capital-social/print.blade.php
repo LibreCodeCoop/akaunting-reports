@@ -26,7 +26,7 @@
                 <h3>Posição por cooperado</h3>
                 <table class="w-full">
                     <thead>
-                        <tr><th>Cooperado</th><th>Direto</th><th>Retido</th><th>Devolvido</th><th>Saldo</th><th>Pendências</th></tr>
+                        <tr><th>Cooperado</th><th>Direto</th><th>Retido</th><th>Devolvido</th><th>Saldo</th><th>Última integralização</th><th>Pendências</th></tr>
                     </thead>
                     <tbody>
                         @foreach ($class->sortedMembers as $member)
@@ -36,6 +36,7 @@
                                 <td>{{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</td>
                                 <td>{{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</td>
                                 <td>{{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</td>
+                                <td>{{ $member['last_contribution_date'] !== null ? company_date($member['last_contribution_date']) : '—' }}</td>
                                 <td>{{ $member['pending'] }} não confirmadas; {{ $member['warnings'] }} ressalvas</td>
                             </tr>
                         @endforeach
