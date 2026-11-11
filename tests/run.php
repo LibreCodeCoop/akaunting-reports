@@ -10,6 +10,7 @@ require_once __DIR__ . '/../Support/CapitalSocialRules.php';
 require_once __DIR__ . '/../Support/CapitalSocialSummary.php';
 require_once __DIR__ . '/../Support/CapitalSocialSorter.php';
 require_once __DIR__ . '/../Support/CapitalSocialReview.php';
+require_once __DIR__ . '/../Support/FrraAnnualMatrix.php';
 
 use Modules\AkauntingReports\Support\Money;
 use Modules\AkauntingReports\Support\CapitalSocialPolicy;
@@ -404,4 +405,82 @@ check(($statusSummary['members'][1]['status_labels'] ?? null)===[],
     'Member with no issues has a clean status state'); ++$tests;
 check($statusSummary['pending_count']===3 && $statusSummary['total_cents']===16250,
     'Status aggregation preserves pending count and confirmed balance'); ++$tests;
+
+$frraEntries = [
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'production','competence'=>'2026-01',
+     'amount_cents'=>10000,'status'=>'draft'],
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'production','competence'=>'2026-01',
+     'amount_cents'=>5000,'status'=>'paid'],
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'annual','competence'=>'2026-01',
+     'amount_cents'=>20000,'status'=>'draft'],
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'annual','competence'=>'2026-02',
+     'amount_cents'=>20000,'status'=>'draft'],
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'annual','competence'=>'2026-09',
+     'amount_cents'=>20200,'status'=>'draft'],
+    ['contact_id'=>202,'name'=>'Cooperado Beta','source'=>'production','competence'=>'2026-12',
+     'amount_cents'=>30000,'status'=>'paid'],
+    ['contact_id'=>202,'name'=>'Cooperado Beta','source'=>'production','competence'=>'2025-12',
+     'amount_cents'=>99000,'status'=>'paid'],
+    ['contact_id'=>202,'name'=>'Cooperado Beta','source'=>'annual','competence'=>'2026-00',
+     'amount_cents'=>10000,'status'=>'paid'],
+];
+$frra = \Modules\AkauntingReports\Support\FrraAnnualMatrix::build($frraEntries, 2026);
+check($frra['members_count'] === 2 && $frra['total_cents'] === 85200,
+    'FRRA month totals reconcile for the specified year without annual double counting'); ++$tests;
+check($frra['production_cents'] === 45000 && $frra['annual_cents'] === 40200,
+    'FRRA annual bill supplements only missing production competencies'); ++$tests;
+check($frra['annual_overlap_months'] === 1 && $frra['overlap_difference_cents'] === 5000,
+    'Duplicate annual/source month is excluded and disagreement surfaced'); ++$tests;
+check($frra['monthlyTotals'] ?? null === null,
+    'FRRA matrix exposes only defined monthly total schema'); ++$tests;
+check($frra['months'][1] === 15000 && $frra['months'][2] === 20000 &&
+    $frra['months'][9] === 20200 && $frra['months'][12] === 30000,
+    'Competence drives exact January, February, September and December positions'); ++$tests;
+check(count($frra['months']) === 12 &&
+    array_sum($frra['months']) === array_sum(array_column($frra['members'], 'total_cents')),
+    'FRRA twelve monthly totals equal all member annual totals'); ++$tests;
+check($frra['members'][0]['months'][1] === 15000
+    && $frra['members'][0]['sources'][2] === 'annual'
+    && $frra['members'][1]['months'][12] === 30000,
+    'FRRA matrix groups source amounts by correct contact and month'); ++$tests;
+check($frra['draft_items'] === 3 && $frra['annual_only_months'] === 2,
+    'FRRA rascunho and annual-only competencies remain visibly distinct'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::competence('Referente ao ano/mês: 2026-09') === '2026-09',
+    'FRRA competence parsed from official document item description'); ++$tests;
+foreach (['2026-00','2026-13','2026-9','2025-12-extra','','September 2026','2026-11','Referente ao ano/mês: 2026-00'] as $invalid) {
+    check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::competence($invalid) === null,
+        'FRRA unverified competence must not silently be mapped to issue date'); ++$tests;
+}
+$dupe = [...$frraEntries,
+    ['contact_id'=>101,'name'=>'Cooperada Alfa','source'=>'annual','competence'=>'2026-02',
+     'amount_cents'=>10000,'status'=>'draft']];
+$frraDupe = \Modules\AkauntingReports\Support\FrraAnnualMatrix::build($dupe,2026);
+check($frraDupe['duplicate_annual_months'] === 1 && $frraDupe['months'][2] === 30000,
+    'Multiple annual items for one month are explicitly flagged, not silently hidden'); ++$tests;
+$frraEmpty=\Modules\AkauntingReports\Support\FrraAnnualMatrix::build([],2024);
+check($frraEmpty['members_count'] === 0 && $frraEmpty['total_cents'] === 0
+    && count($frraEmpty['months'])===12,
+    'FRRA empty year remains a full zeroed twelve-month report'); ++$tests;
+$reportManifest = json_decode(file_get_contents(__DIR__ . '/../module.json'), true, 512, JSON_THROW_ON_ERROR);
+check(in_array('Modules\\AkauntingReports\\Reports\\CapitalSocial', $reportManifest['reports'], true)
+    && in_array('Modules\\AkauntingReports\\Reports\\FrraAnnual', $reportManifest['reports'], true),
+    'FRRA is a second native report without removing the capital report'); ++$tests;
+$frraView=file_get_contents(__DIR__ . '/../Resources/views/reports/frra-annual/content.blade.php');
+check(str_contains($frraView, 'aria-label="Retenções anuais de FRRA por cooperado"')
+    && str_contains($frraView, 'flex flex-wrap lg:flex-nowrap')
+    && str_contains($frraView, 'range(0, 3)'),
+    'FRRA list displays all twelve months in four responsive quarter groups'); ++$tests;
+check(str_contains($frraView,'Total anual')
+    && str_contains($frraView,'$class->summary[\'months\'][$month]'),
+    'FRRA overview includes both member and monthly/annual footer totals'); ++$tests;
+$frraSource=file_get_contents(__DIR__ . '/../Reports/FrraAnnual.php');
+check(str_contains($frraSource, 'StreamedResponse')
+    && str_contains($frraSource, "'Content-Type' => 'text/csv; charset=UTF-8'")
+    && str_contains($frraSource, "->where('type', 'vendor')"),
+    'FRRA native report supports CSV and company member filters'); ++$tests;
+$frraLedgerSource=file_get_contents(__DIR__ . '/../Support/FrraAnnualLedger.php');
+check(str_contains($frraLedgerSource, '->where(\'d.company_id\', $companyId)')
+    && str_contains($frraLedgerSource, "->whereNull('d.deleted_at')")
+    && str_contains($frraLedgerSource, "->whereNull('i.deleted_at')"),
+    'FRRA ledger enforces company isolation and excludes deleted records'); ++$tests;
 echo "$tests business invariants passed\n";

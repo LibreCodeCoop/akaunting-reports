@@ -5,6 +5,46 @@
 
 Independent, reusable [Akaunting](https://akaunting.com/) Laravel module for additional native financial reports. It does not modify the Akaunting core or make payment, tax, or invoice changes.
 
+## FRRA anual / Monthly reserve matrix
+
+The **FRRA Anual** report adds an independent read-only annual matrix:
+one row per cooperative member, twelve months grouped in four compact quarter
+columns, an annual total for each member, and monthly/yearly totals in a final
+row. The native filter switches years and optionally selects a member.
+The responsive layout avoids hidden horizontal scrolling. Native print/PDF
+and CSV contain the complete list, not a page.
+
+Month/year comes from the **explicit competence in each document item**,
+not the invoice issue, due or payment date. Draft bills are included as
+*registered*, not *paid*. Both sources are configured per company:
+
+- Production items with the configured category, document prefix and item
+  name are the primary records of retained FRRA.
+- Annual FRRA bills with a distinct category/prefix **supplement only months
+  absent in that member's production items**. Those cells are marked (†).
+- If both sources contain a month, production wins. Overlaps and different
+  values are surfaced for review, never silently counted twice.
+- Several legitimate production bills in the same month can contribute
+  distinct amounts. Unrelated numbering series (e.g., a copy) do not qualify.
+- Historic descriptions that combine months or omit a precise competence
+  are not guessed or divided. Identified historical unallocated sums are
+  shown separately. Cancelled, deleted, currency-mismatched or invalid
+  items are excluded.
+
+### Install annual FRRA
+
+Identify the two **expense categories and exact document prefixes** of the
+target company. First run dry-run using company-specific IDs:
+
+    php artisan akaunting-reports:install-frra       --company=COMPANY_ID       --production-category=PRODUCTION_CATEGORY_ID       --annual-category=ANNUAL_FRRA_CATEGORY_ID       --production-prefix=PRODUCTION_DOCUMENT_PREFIX       --annual-prefix=ANNUAL_DOCUMENT_PREFIX       --item-name=FRRA --dry-run
+
+After independent financial reconciliation, repeat without the dry-run
+option. Registration is idempotent. Only report settings, the report row
+and its native administrative read permission are written, never accounting
+transactions, payments, contacts or cooperative user accounts.
+
+For evidence and release criteria, see docs/frra-reconciliation.md.
+
 ## Capital social / Member capital
 
 The first report presents a **read-only, confirmed balance** by member, a movement-level audit trail, and entries that require human review. It uses Akaunting's native report page, toolbar and filter bar. The default **position by member**
