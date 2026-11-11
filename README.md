@@ -15,10 +15,13 @@ for view, date, member, movement type and review status. CSV, print and PDF foll
 view while exports include all matching records, not only the visible page.
 The tables use Akaunting's built-in `x-table` and `x-sortablelink` components,
 with whitelisted, numeric-aware sorting applied to the complete dataset
-**before** pagination. The member view defaults to **latest confirmed integralization first**, including
-retentions on settled production documents. Members without confirmed capital
-contributions appear last. The member view uses the same two-level
-first/second field pattern as Akaunting's invoice list, consolidating eight
+**before** pagination. With no saved preference, the member view defaults to
+**pending movements, descending**. In the native report editor, choose any
+available sort column (including latest confirmed capital contribution) and
+ascending/descending direction. The saved choice is applied on opening the
+member report; manually clicking any native sortable column overrides it
+for that request. Report preferences never alter the financial ledger.
+The member view uses the same two-level first/second field pattern as Akaunting's invoice list, consolidating eight
 fields into four native table columns: member/recent contribution,
 direct/retained capital, balance/refunds, and pending counts/reasons.
 Pending and audit reservations are distinguished within the same cell.
@@ -96,10 +99,16 @@ AGPL-3.0-or-later. See `LICENSE` and `LICENSES/AGPL-3.0-or-later.txt`.
 
 ## Native report editing and financial activity
 
-The native Akaunting report editor supports changing the report name, description
-and default view. Fields used there must include the standard attributes
-array expected by the core report form. Changing the default view does not
-alter the financial ledger or any per-company capital classification.
+The native Akaunting report editor supports changing the report name, description,
+default view, member overview sort column and sort direction. The two sorting
+preferences are saved in the existing per-report settings object (no new
+schema, core customization or shared/global preference). The default is
+Pendências (decrescente); users can select Última integralização, saldo,
+cooperado and the other financial columns instead. Column-link clicks always
+override this initial choice. The ledger remains ordered by its independent
+native date sort. Each editable field supplies the standard attributes
+array expected by the core report form. Changing a preference never alters
+the capital ledger or any per-company financial classification.
 
 The member overview offers Any pending or audit reservation, plus the
 individual categories, and shows a sortable latest confirmed contribution

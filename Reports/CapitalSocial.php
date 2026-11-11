@@ -74,19 +74,42 @@ final class CapitalSocial extends Report
 
     public function getFields(): array
     {
-        // Akaunting's own filter bar owns this view switch and preserves it when
-        // applying date, member and other filters. No custom URL controller.
-        return [[
-            'type' => 'select',
-            'name' => 'view',
-            'title' => 'Visualização',
-            'values' => ['overview' => 'Por cooperado', 'ledger' => 'Extrato'],
-            'selected' => in_array($this->model->settings->view ?? null, ['overview', 'ledger'], true)
-                ? $this->model->settings->view : 'overview',
-            'placement' => 'strip',
-            // Required by the stock report create/edit Blade form.
-            'attributes' => [],
-        ]];
+        // The stock report editor persists these as per-report settings.
+        // Sorting preferences apply to the member summary; ledger chronology
+        // retains the native date sorting.
+        [$defaultColumn, $defaultDirection] = CapitalSocialSorter::overviewDefaults(
+            $this->model->settings->default_sort ?? null,
+            $this->model->settings->default_direction ?? null
+        );
+
+        return [
+            [
+                'type' => 'select',
+                'name' => 'view',
+                'title' => 'Visualização',
+                'values' => ['overview' => 'Por cooperado', 'ledger' => 'Extrato'],
+                'selected' => in_array($this->model->settings->view ?? null, ['overview', 'ledger'], true)
+                    ? $this->model->settings->view : 'overview',
+                'placement' => 'strip',
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'default_sort',
+                'title' => 'Ordenação padrão (por cooperado)',
+                'values' => CapitalSocialSorter::overviewOptions(),
+                'selected' => $defaultColumn,
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'default_direction',
+                'title' => 'Direção da ordenação padrão',
+                'values' => ['desc' => 'Decrescente', 'asc' => 'Crescente'],
+                'selected' => $defaultDirection,
+                'attributes' => [],
+            ],
+        ];
     }
 
     public function setFilters(): void
@@ -348,14 +371,18 @@ final class CapitalSocial extends Report
                 $this->capitalSummary = CapitalSocialSummary::calculate($selectedMovements);
                 $this->reviewCounts = CapitalSocialReview::counts($selectedMovements);
             }
-            // Match Akaunting's sortable links: the initially selected order
-            // must be visible in the column header, not only applied internally.
-            // Only set a default when the user has not selected any column.
+            [$defaultColumn, $defaultDirection] = CapitalSocialSorter::overviewDefaults(
+                $this->model->settings->default_sort ?? null,
+                $this->model->settings->default_direction ?? null
+            );
+            // Set the visible native sort arrow without overriding a click
+            // on any other sortable column.
             if (!request()->has('sort')) {
-                request()->merge(['sort' => 'last_contribution_date', 'direction' => 'desc']);
+                request()->merge(['sort' => $defaultColumn, 'direction' => $defaultDirection]);
             }
             $this->sortedMembers = CapitalSocialSorter::sort(
-                $members, 'overview', request()->query('sort'), request()->query('direction')
+                $members, 'overview', request()->query('sort'), request()->query('direction'),
+                $defaultColumn, $defaultDirection
             );
             $this->memberPages = $this->paginate($this->sortedMembers, 15);
         }

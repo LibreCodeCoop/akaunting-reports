@@ -17,20 +17,48 @@ final class CapitalSocialSorter
     private const LEDGER = ['date', 'name', 'kind', 'amount_cents', 'running_balance_cents', 'status', 'source'];
     private const NUMERIC = ['direct_cents', 'retained_cents', 'devolvido_cents', 'saldo_cents', 'pending', 'amount_cents', 'running_balance_cents'];
 
+    /** Valid options offered by the native Akaunting report editor. */
+    public static function overviewOptions(): array
+    {
+        return [
+            'pending' => 'Pendências',
+            'last_contribution_date' => 'Última integralização',
+            'saldo_cents' => 'Saldo',
+            'name' => 'Cooperado',
+            'direct_cents' => 'Integralização direta',
+            'retained_cents' => 'Retenção na produção',
+            'devolvido_cents' => 'Devoluções',
+        ];
+    }
+
+    /** @return array{string,string} A safe, company-report-specific default. */
+    public static function overviewDefaults(mixed $column, mixed $direction): array
+    {
+        $key = is_string($column) && in_array($column, self::OVERVIEW, true)
+            ? $column : 'pending';
+        $dir = is_string($direction) && in_array(strtolower($direction), ['asc', 'desc'], true)
+            ? strtolower($direction) : 'desc';
+
+        return [$key, $dir];
+    }
+
     /** @param list<array<string, mixed>> $rows
      *  @return list<array<string, mixed>>
      */
-    public static function sort(array $rows, string $view, mixed $column, mixed $direction): array
-    {
+    public static function sort(
+        array $rows, string $view, mixed $column, mixed $direction,
+        mixed $preferredColumn = null, mixed $preferredDirection = null
+    ): array {
         $allowed = $view === 'ledger' ? self::LEDGER : self::OVERVIEW;
-        $default = $view === 'ledger' ? 'date' : 'last_contribution_date';
+        [$default, $defaultDirection] = $view === 'ledger'
+            ? ['date', 'desc']
+            : self::overviewDefaults($preferredColumn, $preferredDirection);
         $validColumn = is_string($column) && in_array($column, $allowed, true);
         $key = $validColumn ? $column : $default;
-        // An invalid sort key cannot alter the safe default order by supplying
-        // an otherwise valid direction. Explicit valid columns remain user-sortable.
+        // A malformed URL cannot change the configured fallback order.
         $dir = $validColumn && is_string($direction) && in_array(strtolower($direction), ['asc', 'desc'], true)
             ? strtolower($direction)
-            : ($key === $default ? 'desc' : 'asc');
+            : ($key === $default ? $defaultDirection : 'asc');
         $factor = $dir === 'asc' ? 1 : -1;
 
         usort($rows, static function (array $a, array $b) use ($key, $factor): int {

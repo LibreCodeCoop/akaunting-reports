@@ -137,6 +137,10 @@ check(CapitalSocialReview::shortLabel('Confirmada com ressalva') === 'Confirmaç
     'Confirmed audit reservation remains distinct from pending'); ++$tests;
 check(CapitalSocialReview::shortLabel('Saldo negativo') === 'Saldo negativo',
     'Unmapped audit issues retain complete meaning'); ++$tests;
+check(substr_count($overviewMarkup, 'override="class" class="lg:w-') === 4
+    && substr_count($overviewMarkup, 'text-left rtl:text-right') === 4
+    && !str_contains($overviewMarkup, 'kind="amount"'),
+    'Four native table headers use matching left-aligned cell padding'); ++$tests;
 $reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
 check(str_contains($reportSource, "parent::setViews()")
     && !str_contains($reportSource, "views['show'] ="),
@@ -153,13 +157,29 @@ $syntheticMembers = [
     ['name'=>'Synthetic M', 'contact_id'=>3, 'saldo_cents'=>1000,'direct_cents'=>1000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>1,'last_contribution_date'=>'2026-11-05'],
 ];
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null);
-check(array_column($ordered,'contact_id') === [3,2,1], 'Default shows latest confirmed capital contribution first, not pending count'); ++$tests;
+check(array_column($ordered,'contact_id') === [1,3,2], 'Default overview prioritizes unresolved pending counts'); ++$tests;
+check(CapitalSocialSorter::overviewDefaults(null, null) === ['pending', 'desc'],
+    'Default report preference sorts by pending count desc'); ++$tests;
+check(CapitalSocialSorter::overviewDefaults('last_contribution_date', 'asc') === ['last_contribution_date', 'asc'],
+    'Saved alternate column and direction are preserved'); ++$tests;
+check(CapitalSocialSorter::overviewDefaults('untrusted','desc') === ['pending','desc'],
+    'Invalid saved column falls back to safe pending sorting'); ++$tests;
+check(CapitalSocialSorter::overviewDefaults('name','bad') === ['name','desc'],
+    'Invalid saved direction falls back to descending'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null, 'last_contribution_date', 'desc');
+check(array_column($ordered,'contact_id') === [3,2,1], 'Saved recency sort applies before pagination'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null, 'name', 'asc');
+check(array_column($ordered,'contact_id') === [1,3,2], 'Saved alphabetical ascending sort is honored'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'saldo_cents','desc','pending','desc');
+check(array_column($ordered,'contact_id') === [2,1,3], 'Manual native sorting overrides saved preference'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'untrusted','asc','last_contribution_date','desc');
+check(array_column($ordered,'contact_id') === [3,2,1], 'Untrusted query sort falls back to configured preference'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'desc');
 check(array_column($ordered,'contact_id') === [1,3,2], 'Manual pending sort is still available'); ++$tests;
 $withNoContribution = [...$syntheticMembers, ['name'=>'Synthetic N','contact_id'=>4,'saldo_cents'=>0,
     'direct_cents'=>0,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>4,'last_contribution_date'=>null]];
 $ordered = CapitalSocialSorter::sort($withNoContribution, 'overview', null, null);
-check(array_column($ordered, 'contact_id') === [3,2,1,4], 'Members without confirmed contributions appear last'); ++$tests;
+check(array_column($ordered, 'contact_id') === [4,1,3,2], 'Default pending order counts unconfirmed records, including members without contributions'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'saldo_cents', 'desc');
 check(array_column($ordered,'contact_id') === [2,1,3], 'Explicit balance sorting overrides default pending priority'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'asc');
@@ -171,7 +191,7 @@ check(array_column($ordered,'contact_id') === [2,3,1], 'Native name sort desc');
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'desc');
 check(array_column($ordered,'contact_id') === [1,3,2], 'Pending count uses numeric sorting'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'unknown;DROP TABLE', 'asc');
-check($ordered[0]['contact_id'] === 3, 'Untrusted sort key falls back to safe latest-contribution ordering'); ++$tests;
+check($ordered[0]['contact_id'] === 1, 'Untrusted sort key falls back to default pending ordering'); ++$tests;
 $ledgerRows = [
     ['id'=>3,'date'=>'2026-01-03','name'=>'A','source'=>'document','kind'=>'revisao','status'=>'revisar','amount_cents'=>0,'candidate_cents'=>5000,'running_balance_cents'=>1000],
     ['id'=>1,'date'=>'2026-01-01','name'=>'B','source'=>'transaction','kind'=>'integralizacao','status'=>'confirmado','amount_cents'=>1500,'candidate_cents'=>1500,'running_balance_cents'=>1500],
@@ -241,6 +261,9 @@ $recentSorted=CapitalSocialSorter::sort($recent['members'],'overview','last_cont
 check($recentSorted[0]['contact_id']===101,'Native last-contribution order prioritizes recent confirmed activity'); ++$tests;
 check(str_contains($reportSource, "'attributes' => []"),
     'Native report field must supply an attributes array to the edit template'); ++$tests;
+check(str_contains($reportSource, "'name' => 'default_sort'")
+    && str_contains($reportSource, "'name' => 'default_direction'"),
+    'Native Akaunting edit form exposes a sortable column and direction preference'); ++$tests;
 check(str_contains($reportSource, "model->settings->view"),
     'Editing the saved view changes the default report presentation'); ++$tests;
 check(str_contains($reportSource, "'any' => 'Qualquer pendência ou ressalva'"),

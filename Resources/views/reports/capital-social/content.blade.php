@@ -141,7 +141,7 @@
                 <x-table aria-label="Posição do capital social por cooperado" style="width:100%;">
                     <x-table.thead class="hidden lg:block">
                         <x-table.tr>
-                            <x-table.th class="lg:w-3/12 min-w-0">
+                            <x-table.th override="class" class="lg:w-3/12 min-w-0 px-2 py-3 text-xs font-medium text-black text-left rtl:text-right">
                                 <x-slot name="first">
                                     <x-sortablelink column="name" title="Cooperado" />
                                 </x-slot>
@@ -149,7 +149,7 @@
                                     <x-sortablelink column="last_contribution_date" title="Última integralização" />
                                 </x-slot>
                             </x-table.th>
-                            <x-table.th class="lg:w-3/12 min-w-0" kind="amount">
+                            <x-table.th override="class" class="lg:w-3/12 min-w-0 px-2 py-3 text-xs font-medium text-black text-left rtl:text-right">
                                 <x-slot name="first">
                                     <x-sortablelink column="direct_cents" title="Integralização direta" />
                                 </x-slot>
@@ -157,7 +157,7 @@
                                     <x-sortablelink column="retained_cents" title="Retenção na produção" />
                                 </x-slot>
                             </x-table.th>
-                            <x-table.th class="lg:w-2/12 min-w-0" kind="amount">
+                            <x-table.th override="class" class="lg:w-2/12 min-w-0 px-2 py-3 text-xs font-medium text-black text-left rtl:text-right">
                                 <x-slot name="first">
                                     <x-sortablelink column="saldo_cents" title="Saldo" />
                                 </x-slot>
@@ -165,7 +165,7 @@
                                     <x-sortablelink column="devolvido_cents" title="Devoluções" />
                                 </x-slot>
                             </x-table.th>
-                            <x-table.th class="lg:w-4/12 min-w-0">
+                            <x-table.th override="class" class="lg:w-4/12 min-w-0 px-2 py-3 text-xs font-medium text-black text-left rtl:text-right">
                                 <x-slot name="first">
                                     <x-sortablelink column="pending" title="Pendências" />
                                 </x-slot>

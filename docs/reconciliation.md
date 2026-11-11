@@ -68,10 +68,13 @@ A confirmed movement can carry an audit warning without becoming pending.
 The overview displays audit reservations separately so the number of
 unconfirmed movements agrees with the detailed ledger.
 
-The member overview defaults to **latest confirmed positive integralization
-date descending**, placing members without confirmed integralizations last.
-Native sortable links allow the user to select other columns, including pending
-count. The compact member view uses four native two-line columns, like the native
+The member overview defaults to **pending movement count descending** until
+a different sort key and direction are saved through the native report edit
+form. The choice is stored per report in Akaunting settings, is allowlisted,
+and is applied before pagination. Manual native sortable links override the
+saved preference. Selecting the last-confirmed-integralization sort instead
+places members without confirmed integralizations last when descending.
+The compact member view uses four native two-line columns, like the native
 invoice list: member/date, direct/retained contribution, balance/refunds,
 and the combined pending/warning/reason cell. Long detailed reason strings are
 available in tooltips and the individual ledger; the overview uses short labels.
