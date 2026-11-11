@@ -47,3 +47,23 @@ Entries from investments **owned by** the company in other cooperatives are not
 member shares **held in** the company and must not be mixed into this ledger.
 When a transaction references an unrelated document, keep it as a pending
 candidate; matching capital invoices must remain deduplicated.
+
+## Review state and refresh
+
+The dashboard reports confirmed capital separately from candidate movements. Pending
+entries are not integralized, even if a candidate value is visible. The source ledger
+is queried on each report refresh, and classification is re-evaluated; no review
+status is stored by this module. An unpaid document is *awaiting payment*, not
+necessarily an error; it becomes eligible when settlement records satisfy the
+recognition rules. Incomplete or ambiguous records require correction and
+reconciliation at the Akaunting source. The report never offers a manual approval
+control capable of changing financial classification.
+
+The native Akaunting report filter bar is used for as-of date, selected member,
+confirmation state, movement type and review reason. Native sortable column links
+preserve the search query. Sorting is allowlisted and applied to all matching rows
+before pagination; exports likewise include the matching sorted dataset.
+
+A confirmed movement can carry an audit warning without becoming pending.
+The overview displays audit reservations separately so the number of
+unconfirmed movements agrees with the detailed ledger.

@@ -8,11 +8,15 @@ require_once __DIR__ . '/../Support/Money.php';
 require_once __DIR__ . '/../Support/CapitalSocialPolicy.php';
 require_once __DIR__ . '/../Support/CapitalSocialRules.php';
 require_once __DIR__ . '/../Support/CapitalSocialSummary.php';
+require_once __DIR__ . '/../Support/CapitalSocialSorter.php';
+require_once __DIR__ . '/../Support/CapitalSocialReview.php';
 
 use Modules\AkauntingReports\Support\Money;
 use Modules\AkauntingReports\Support\CapitalSocialPolicy;
 use Modules\AkauntingReports\Support\CapitalSocialRules;
 use Modules\AkauntingReports\Support\CapitalSocialSummary;
+use Modules\AkauntingReports\Support\CapitalSocialSorter;
+use Modules\AkauntingReports\Support\CapitalSocialReview;
 
 function check(bool $condition, string $message): void
 {
@@ -103,4 +107,61 @@ check(str_contains($reportSource, "views['capital']") && str_contains($reportSou
 check(is_file(__DIR__ . '/../Resources/views/reports/capital-social/content.blade.php')
     && !is_file(__DIR__ . '/../Resources/views/reports/capital-social/show.blade.php'),
     'Native report is not shadowed by an independent admin page'); ++$tests;
+
+$syntheticMembers = [
+    ['name'=>'Synthetic Z', 'contact_id'=>2, 'saldo_cents'=>500,'direct_cents'=>400,'retained_cents'=>100,'devolvido_cents'=>0,'pending'=>0],
+    ['name'=>'Synthetic A', 'contact_id'=>1, 'saldo_cents'=>11000,'direct_cents'=>11000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>2],
+    ['name'=>'Synthetic M', 'contact_id'=>3, 'saldo_cents'=>1000,'direct_cents'=>1000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>1],
+];
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null);
+check(array_column($ordered,'contact_id') === [1,3,2], 'Default capital order sorts numeric balances desc'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'name', 'asc');
+check(array_column($ordered,'contact_id') === [1,3,2], 'Native name sort asc'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'name', 'desc');
+check(array_column($ordered,'contact_id') === [2,3,1], 'Native name sort desc'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'desc');
+check(array_column($ordered,'contact_id') === [1,3,2], 'Pending count uses numeric sorting'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'unknown;DROP TABLE', 'asc');
+check($ordered[0]['contact_id'] === 2, 'Untrusted sort key falls back to safe allowed column'); ++$tests;
+$ledgerRows = [
+    ['id'=>3,'date'=>'2026-01-03','name'=>'A','source'=>'document','kind'=>'revisao','status'=>'revisar','amount_cents'=>0,'candidate_cents'=>5000,'running_balance_cents'=>1000],
+    ['id'=>1,'date'=>'2026-01-01','name'=>'B','source'=>'transaction','kind'=>'integralizacao','status'=>'confirmado','amount_cents'=>1500,'candidate_cents'=>1500,'running_balance_cents'=>1500],
+    ['id'=>2,'date'=>'2026-01-02','name'=>'B','source'=>'document','kind'=>'retencao','status'=>'confirmado','amount_cents'=>2000,'candidate_cents'=>2000,'running_balance_cents'=>3500],
+];
+$ordered=CapitalSocialSorter::sort($ledgerRows,'ledger','date','asc');
+check(array_column($ordered,'id') === [1,2,3],'Chronological native sort asc'); ++$tests;
+$ordered=CapitalSocialSorter::sort($ledgerRows,'ledger','amount_cents','desc');
+check(array_column($ordered,'id') === [3,2,1],'Native amount sort uses visible pending candidate amounts'); ++$tests;
+$ordered=CapitalSocialSorter::sort($ledgerRows,'ledger','date','invalid');
+check(array_column($ordered,'id') === [3,2,1],'Invalid direction defaults to latest first'); ++$tests;
+
+$unpaidRow = ['status'=>'revisar','reason'=>'Unpaid document: capital is not yet confirmed.'];
+$unlinkedRow = ['status'=>'revisar','reason'=>'Capital-related transaction references a non-capital document.'];
+$confirmedRow = ['status'=>'confirmado','reason'=>''];
+$counts=CapitalSocialReview::counts([$unpaidRow,$unpaidRow,$unlinkedRow,$confirmedRow]);
+check($counts === ['confirmed'=>1,'awaiting_payment'=>2,'requires_review'=>1],
+    'Awaiting payment and ambiguous records are separate dynamic classifications'); ++$tests;
+check(CapitalSocialReview::label($unpaidRow)==='Aguardando pagamento', 'Unpaid candidate is not presented as manual review'); ++$tests;
+check(CapitalSocialReview::category($confirmedRow)==='confirmed','Confirmed movement remains separate'); ++$tests;
+check(CapitalSocialRules::document([...$base,'has_payment'=>false])['kind']==='revisao'
+    && CapitalSocialRules::document($base)['kind']==='integralizacao',
+    'Capital confirmation recalculates after the underlying payment is recorded'); ++$tests;
+$nativeView=file_get_contents(__DIR__.'/../Resources/views/reports/capital-social/content.blade.php');
+check(str_contains($nativeView,'<x-table>') || str_contains($nativeView,'<x-table '),
+    'Capital report uses the actual Akaunting table component'); ++$tests;
+check(substr_count($nativeView,'<x-sortablelink') >= 12,
+    'Visible columns use native Akaunting sortable links'); ++$tests;
+
+$warningOnly=CapitalSocialSummary::calculate([
+    ['identity'=>'contact:100','name'=>'Synthetic warning','contact_id'=>100,
+     'kind'=>'retencao','amount_cents'=>6250,'status'=>'confirmado',
+     'reason'=>'A documented non-capital deduction was added after payment; review the source document.'],
+]);
+check($warningOnly['pending_count']===0 && $warningOnly['warnings_count']===1,
+    'Confirmed audit warning is not an unconfirmed movement'); ++$tests;
+check($warningOnly['members'][0]['pending']===0 && $warningOnly['members'][0]['warnings']===1,
+    'Member pending count stays separate from confirmed audit warnings'); ++$tests;
+check($warningOnly['total_cents']===6250,'Confirmed with warning contributes to capital'); ++$tests;
+check(CapitalSocialReview::label(['status'=>'confirmado','reason'=>'Source audit'])==='Confirmada com ressalva',
+    'Confirmed warning has explicit presentation'); ++$tests;
 echo "$tests business invariants passed\n";

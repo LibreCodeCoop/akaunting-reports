@@ -80,12 +80,16 @@
                 @endif
                 <p class="text-sm text-black-400">
                     <strong>{{ $class->capitalSummary['confirmed_count'] }}</strong> movimentações confirmadas ·
-                    <strong>{{ $class->capitalSummary['pending_count'] }}</strong> aguardando conferência.
-                    <span class="text-gray-500">Pendências não são somadas ao capital.</span>
+                    <strong>{{ $class->reviewCounts['awaiting_payment'] }}</strong> aguardando pagamento ·
+                    <strong>{{ $class->reviewCounts['requires_review'] }}</strong> exigindo conferência.
+                    @if ($class->capitalSummary['warnings_count'] > 0)
+                        <strong>{{ $class->capitalSummary['warnings_count'] }}</strong> ressalva(s) em saldos confirmados.
+                    @endif
+                    <span class="text-gray-500">Valores não confirmados não são somados ao capital. A situação é recalculada na atualização.</span>
                 </p>
             </div>
             @if ($class->capitalSummary['pending_count'] > 0)
-                <a href="{{ $class->reportUrl('ledger', $class->selectedMember) }}" class="text-sm font-medium text-blue-600 hover:underline">
+                <a href="{{ $class->reportUrl('ledger', $class->selectedMember, 'revisar') }}" class="text-sm font-medium text-blue-600 hover:underline">
                     Conferir extrato
                 </a>
             @endif
@@ -110,47 +114,51 @@
             <div class="mb-4 flex flex-wrap items-baseline justify-between gap-2">
                 <div>
                     <h3 class="text-lg font-semibold text-black-400">Capital por cooperado</h3>
-                    <p class="mt-1 text-sm text-gray-500">Selecione um cooperado para consultar seu extrato e a evolução do saldo.</p>
+                    <p class="mt-1 text-sm text-gray-500">Clique em um cooperado para abrir seu extrato. Ordene por qualquer coluna ou use a barra nativa de filtros acima.</p>
                 </div>
-                <span class="text-sm text-gray-500">{{ $class->capitalSummary['members_count'] }} registros</span>
+                <span class="text-sm text-gray-500">{{ count($class->sortedMembers) }} cooperados encontrados</span>
             </div>
 
             <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <table class="w-full rp-border-collapse text-sm" aria-label="Posição do capital social por cooperado">
-                    <thead class="thead-light">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left">Cooperado</th>
-                            <th scope="col" class="px-4 py-3 text-right">Integralização direta</th>
-                            <th scope="col" class="px-4 py-3 text-right">Retenção na produção</th>
-                            <th scope="col" class="px-4 py-3 text-right">Devoluções</th>
-                            <th scope="col" class="px-4 py-3 text-right">Saldo</th>
-                            <th scope="col" class="px-4 py-3 text-center">Conferência</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <x-table aria-label="Posição do capital social por cooperado">
+                    <x-table.thead>
+                        <x-table.tr>
+                            <x-table.th class="w-3/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
+                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="direct_cents" title="Integralização direta" /></x-table.th>
+                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="retained_cents" title="Retenção na produção" /></x-table.th>
+                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
+                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
+                            <x-table.th class="w-1/12"><x-sortablelink column="pending" title="Pendências" /></x-table.th>
+                        </x-table.tr>
+                    </x-table.thead>
+                    <x-table.tbody>
                         @forelse ($class->memberPages as $member)
-                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                <td class="px-4 py-3">
+                            <x-table.tr>
+                                <x-table.td class="w-3/12">
                                     <a href="{{ $class->reportUrl('ledger', $member['contact_id']) }}"
                                        class="font-medium text-blue-600 hover:underline">{{ $member['name'] }}</a>
-                                </td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</td>
-                                <td class="px-4 py-3 text-right whitespace-nowrap font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</td>
-                                <td class="px-4 py-3 text-center">
+                                </x-table.td>
+                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-2/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
+                                <x-table.td class="w-1/12">
                                     @if ($member['pending'] > 0)
-                                        <span class="inline-flex rounded px-2 py-1 text-xs text-yellow-700 bg-yellow-50">{{ $member['pending'] }} a conferir</span>
-                                    @else
-                                        <span class="inline-flex rounded px-2 py-1 text-xs text-green-700 bg-green-50">Sem pendências</span>
+                                        <span class="text-yellow-700 font-medium">{{ $member['pending'] }} pendente(s)</span>
                                     @endif
-                                </td>
-                            </tr>
+                                    @if ($member['warnings'] > 0)
+                                        <div class="text-xs text-yellow-700">{{ $member['warnings'] }} ressalva(s)</div>
+                                    @endif
+                                    @if ($member['pending'] === 0 && $member['warnings'] === 0)
+                                        <span class="text-green-700">Sem pendências</span>
+                                    @endif
+                                </x-table.td>
+                            </x-table.tr>
                         @empty
-                            <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Nenhum cooperado encontrado para os filtros aplicados.</td></tr>
+                            <x-table.tr><x-table.td class="w-full">Nenhum cooperado encontrado para os filtros aplicados.</x-table.td></x-table.tr>
                         @endforelse
-                    </tbody>
-                </table>
+                    </x-table.tbody>
+                </x-table>
             </div>
             @if ($class->memberPages->hasPages())
                 <div class="mt-4">{{ $class->memberPages->links() }}</div>
@@ -160,11 +168,11 @@
                 <div>
                     <h3 class="text-lg font-semibold text-black-400">Extrato de movimentações</h3>
                     <p class="mt-1 text-sm text-gray-500">
-                        {{ count($class->movements) }} registros encontrados.
+                        {{ count($class->movements) }} registros encontrados. Clique nos títulos para ordenar.
                         @if ($class->selectedMember !== null)
-                            O saldo individual mostra a evolução histórica, inclusive com filtros de situação.
+                            O saldo individual reflete toda a sequência cronológica, mesmo quando o filtro oculta lançamentos.
                         @else
-                            Use o filtro de cooperado para consultar um saldo individual acumulado.
+                            Selecione um cooperado na barra de filtros para visualizar o saldo individual acumulado.
                         @endif
                     </p>
                 </div>
@@ -172,56 +180,57 @@
             </div>
 
             <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <table class="w-full rp-border-collapse text-sm" aria-label="Extrato do capital social">
-                    <thead class="thead-light">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left">Data</th>
-                            <th scope="col" class="px-4 py-3 text-left">Cooperado</th>
-                            <th scope="col" class="px-4 py-3 text-left">Natureza</th>
-                            <th scope="col" class="px-4 py-3 text-right">Valor</th>
-                            @if ($class->selectedMember !== null)
-                                <th scope="col" class="px-4 py-3 text-right">Saldo individual</th>
+                <x-table aria-label="Extrato do capital social">
+                    <x-table.thead>
+                        <x-table.tr>
+                            <x-table.th class="w-2/12"><x-sortablelink column="date" title="Data" /></x-table.th>
+                            @if ($class->selectedMember === null)
+                                <x-table.th class="w-2/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
                             @endif
-                            <th scope="col" class="px-4 py-3 text-left">Situação</th>
-                            <th scope="col" class="px-4 py-3 text-left">Origem</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                            <x-table.th class="w-2/12"><x-sortablelink column="kind" title="Natureza" /></x-table.th>
+                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="amount_cents" title="Valor" /></x-table.th>
+                            @if ($class->selectedMember !== null)
+                                <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="running_balance_cents" title="Saldo individual" /></x-table.th>
+                            @endif
+                            <x-table.th class="w-2/12"><x-sortablelink column="status" title="Situação" /></x-table.th>
+                            <x-table.th class="w-2/12"><x-sortablelink column="source" title="Origem" /></x-table.th>
+                        </x-table.tr>
+                    </x-table.thead>
+                    <x-table.tbody>
                         @forelse ($class->movementPages as $row)
-                            <tr class="border-b border-gray-100 hover:bg-gray-50">
-                                <td class="px-4 py-3 whitespace-nowrap">{{ company_date($row['date']) }}</td>
-                                <td class="px-4 py-3">{{ $row['name'] }}</td>
-                                <td class="px-4 py-3">
+                            <x-table.tr>
+                                <x-table.td class="w-2/12">{{ company_date($row['date']) }}</x-table.td>
+                                @if ($class->selectedMember === null)
+                                    <x-table.td class="w-2/12">{{ $row['name'] }}</x-table.td>
+                                @endif
+                                <x-table.td class="w-2/12">
                                     @switch($row['kind'])
                                         @case('integralizacao') Integralização direta @break
                                         @case('retencao') Retenção na produção @break
                                         @case('devolucao') Devolução @break
-                                        @default Conferência necessária
+                                        @default Análise necessária
                                     @endswitch
-                                </td>
-                                <td class="px-4 py-3 text-right font-medium whitespace-nowrap">
+                                </x-table.td>
+                                <x-table.td kind="amount" class="w-2/12">
                                     @if ($row['status'] === 'confirmado')
                                         R$ {{ \Modules\AkauntingReports\Support\Money::format($row['amount_cents']) }}
                                     @else
-                                        <span class="text-gray-500">Não contabilizado</span>
+                                        <span class="text-gray-500">Não confirmado</span>
                                         @if ($row['candidate_cents'] > 0)
-                                            <div class="mt-1 text-xs text-yellow-700">
-                                                R$ {{ \Modules\AkauntingReports\Support\Money::format($row['candidate_cents']) }} em análise
-                                            </div>
+                                            <div class="mt-1 text-xs text-yellow-700">R$ {{ \Modules\AkauntingReports\Support\Money::format($row['candidate_cents']) }} em análise</div>
                                         @endif
                                     @endif
-                                </td>
+                                </x-table.td>
                                 @if ($class->selectedMember !== null)
-                                    <td class="px-4 py-3 text-right whitespace-nowrap">R$ {{ \Modules\AkauntingReports\Support\Money::format($row['running_balance_cents']) }}</td>
+                                    <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($row['running_balance_cents']) }}</x-table.td>
                                 @endif
-                                <td class="px-4 py-3">
-                                    @if ($row['status'] === 'confirmado')
-                                        <span class="text-green-700">Confirmada</span>
-                                    @else
-                                        <span class="text-yellow-700 font-medium" title="{{ $row['reason'] }}">A conferir</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
+                                <x-table.td class="w-2/12">
+                                    @php $reviewType = \Modules\AkauntingReports\Support\CapitalSocialReview::category($row); @endphp
+                                    <span class="{{ $reviewType === 'confirmed' ? 'text-green-700' : 'text-yellow-700' }} font-medium">
+                                        {{ \Modules\AkauntingReports\Support\CapitalSocialReview::label($row) }}
+                                    </span>
+                                </x-table.td>
+                                <x-table.td class="w-2/12">
                                     @php
                                         $sourceRoute = $row['source'] === 'transaction' ? 'transactions.show'
                                             : ($row['document_type'] === 'bill' ? 'bills.show' : 'invoices.show');
@@ -229,22 +238,19 @@
                                     <a href="{{ route($sourceRoute, $row['id']) }}" class="text-blue-600 hover:underline"
                                        title="Abrir o lançamento de origem">
                                         {{ $row['source'] === 'document' ? 'Documento' : 'Transação' }} #{{ $row['id'] }}
-                                        <span class="material-icons align-middle text-sm" aria-hidden="true">open_in_new</span>
                                     </a>
-                                    @if ($row['reason'] !== '')
-                                        <div class="mt-1 text-xs text-gray-500">{{ $row['reason'] }}</div>
+                                    @if ($row['status'] !== 'confirmado' || $row['reason'] !== '')
+                                        <div class="mt-1 text-xs text-gray-500">
+                                            {{ \Modules\AkauntingReports\Support\CapitalSocialReview::guidance($row) }}
+                                        </div>
                                     @endif
-                                </td>
-                            </tr>
+                                </x-table.td>
+                            </x-table.tr>
                         @empty
-                            <tr>
-                                <td colspan="{{ $class->selectedMember !== null ? 7 : 6 }}" class="px-4 py-8 text-center text-gray-500">
-                                    Nenhuma movimentação encontrada. Ajuste os filtros na barra acima.
-                                </td>
-                            </tr>
+                            <x-table.tr><x-table.td class="w-full">Nenhuma movimentação encontrada para os filtros aplicados.</x-table.td></x-table.tr>
                         @endforelse
-                    </tbody>
-                </table>
+                    </x-table.tbody>
+                </x-table>
             </div>
             @if ($class->movementPages->hasPages())
                 <div class="mt-4">{{ $class->movementPages->links() }}</div>

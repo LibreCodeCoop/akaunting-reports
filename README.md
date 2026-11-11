@@ -13,6 +13,20 @@ Selecting a member opens their individual ledger with a chronological running ba
 The **movement ledger** is a separate paginated view (25 rows per page), with native controls
 for view, date, member, movement type and review status. CSV, print and PDF follow the current
 view while exports include all matching records, not only the visible page.
+The tables use Akaunting's built-in `x-table` and `x-sortablelink` components,
+with whitelisted, numeric-aware sorting applied to the complete dataset
+**before** pagination. The report bar (`report-filter`) is the native Akaunting
+report filtering system; it differs from the transaction/item index search bar.
+It offers company-specific member selection, as-of date, overview pending-members
+filter, and ledger confirmation, nature and reason filters.
+
+**Review is derived, not approved manually.** Unpaid documents are labelled
+"Awaiting payment" (they become eligible after payment is reconciled);
+ambiguous classifications require correcting the underlying document or transaction.
+There is no "mark resolved" flag and no manual override of the accounting balance.
+A **confirmed movement with an audit reservation** remains in the confirmed
+capital balance; its warning is listed separately from the genuinely
+unconfirmed movements. This prevents inflating the pending count.
 The report retains Akaunting's existing reports authorization boundary. The report is **not** a complete corporate capital register and does not infer subscribed but unpaid capital.
 
 The calculation uses a configurable capital category, capital document item, and dedicated refund category code. It detects bank deposits, paid capital invoices, production withholdings, and documented refunds. Unpaid, partially paid, mixed, foreign-currency or otherwise ambiguous records remain marked for review and do not silently increase balances.
