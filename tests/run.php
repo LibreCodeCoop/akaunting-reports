@@ -77,4 +77,30 @@ try {
     new CapitalSocialPolicy(companyId: 1, categoryId: 4, itemId: 8, excludedExpenseCategoryId: -2);
     throw new RuntimeException('Invalid external-capital category was accepted');
 } catch (InvalidArgumentException) { ++$tests; }
+
+$byType = CapitalSocialSummary::calculate([
+    ['identity'=>'contact:10','name'=>'Synthetic A','contact_id'=>10,
+     'kind'=>'integralizacao','amount_cents'=>10000,'status'=>'confirmado','reason'=>''],
+    ['identity'=>'contact:10','name'=>'Synthetic A','contact_id'=>10,
+     'kind'=>'retencao','amount_cents'=>2500,'status'=>'confirmado','reason'=>''],
+    ['identity'=>'contact:10','name'=>'Synthetic A','contact_id'=>10,
+     'kind'=>'devolucao','amount_cents'=>-1000,'status'=>'confirmado','reason'=>''],
+    ['identity'=>'contact:10','name'=>'Synthetic A','contact_id'=>10,
+     'kind'=>'revisao','amount_cents'=>0,'status'=>'revisar','reason'=>'Unsettled'],
+]);
+check($byType['direct_cents'] === 10000, 'Direct capital must exclude production retention'); ++$tests;
+check($byType['retained_cents'] === 2500, 'Production retention has its own metric'); ++$tests;
+check($byType['devolvido_cents'] === 1000, 'Refund metrics exclude deposits'); ++$tests;
+check($byType['total_cents'] === 11500, 'Capital balance reconciles across movement types'); ++$tests;
+check($byType['pending_count'] === 1 && $byType['confirmed_count'] === 3, 'Pending does not inflate balances'); ++$tests;
+check($byType['members_count'] === 1 && $byType['movement_count'] === 4, 'Dashboard counts are source-derived'); ++$tests;
+$reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
+check(str_contains($reportSource, "parent::setViews()")
+    && !str_contains($reportSource, "views['show'] ="),
+    'Core Akaunting report layout is not replaced'); ++$tests;
+check(str_contains($reportSource, "views['capital']") && str_contains($reportSource, 'getAsOfDate()'),
+    'Native report content and as-of filter are wired'); ++$tests;
+check(is_file(__DIR__ . '/../Resources/views/reports/capital-social/content.blade.php')
+    && !is_file(__DIR__ . '/../Resources/views/reports/capital-social/show.blade.php'),
+    'Native report is not shadowed by an independent admin page'); ++$tests;
 echo "$tests business invariants passed\n";

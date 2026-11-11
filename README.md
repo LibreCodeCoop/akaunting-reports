@@ -7,7 +7,13 @@ Independent, reusable [Akaunting](https://akaunting.com/) Laravel module for add
 
 ## Capital social / Member capital
 
-The first report presents a **read-only, confirmed balance** by member, a movement-level audit trail, and entries that require human review. It supports as-of date, member filter, CSV, print, and PDF using Akaunting's existing reports authorization boundary. The report is **not** a complete corporate capital register and does not infer subscribed but unpaid capital.
+The first report presents a **read-only, confirmed balance** by member, a movement-level audit trail, and entries that require human review. It uses Akaunting's native report page, toolbar and filter bar. The default **position by member**
+shows direct integralizations, production withholdings, refunds and confirmed stock balances.
+Selecting a member opens their individual ledger with a chronological running balance.
+The **movement ledger** is a separate paginated view (25 rows per page), with native controls
+for view, date, member, movement type and review status. CSV, print and PDF follow the current
+view while exports include all matching records, not only the visible page.
+The report retains Akaunting's existing reports authorization boundary. The report is **not** a complete corporate capital register and does not infer subscribed but unpaid capital.
 
 The calculation uses a configurable capital category, capital document item, and dedicated refund category code. It detects bank deposits, paid capital invoices, production withholdings, and documented refunds. Unpaid, partially paid, mixed, foreign-currency or otherwise ambiguous records remain marked for review and do not silently increase balances.
 
@@ -29,7 +35,7 @@ The calculation uses a configurable capital category, capital document item, and
    php artisan akaunting-reports:install-capital --company=COMPANY_ID --category=CATEGORY_ID --item=ITEM_ID --dry-run
    ```
 
-5. **Only after reconciled approval**, run the same command without `--dry-run` to provision that company's settings and report row. Optionally supply `--refund-code=...`, `--advance-category=...`, `--advance-item=...`, `--legacy-refund-category=...`, `--late-deduction-item=..., `--excluded-expense-category=...``, using values verified in the same company. Historical aliases are opt-in and must not be inferred from another installation. No financial documents or transactions are changed.
+5. **Only after reconciled approval**, run the same command without `--dry-run` to provision that company's settings and report row. Optionally supply `--refund-code=...`, `--advance-category=...`, `--advance-item=...`, `--legacy-refund-category=...`, `--late-deduction-item=...`, `--excluded-expense-category=...`, using values verified in the same company. Historical aliases are opt-in and must not be inferred from another installation. No financial documents or transactions are changed.
 6. Grant the required *read-akaunting-reports-reports-capital-social* permission only to authorized report viewers. Locate the report in the native **Reports** section.
 
 Never test with credentials, copied personal records or dumps in this repository. Read [Reconciliation and release gate](docs/reconciliation.md) before any deployment. A syntactically correct or green CI run is not a substitute for reconciliation of real business records.
@@ -41,7 +47,7 @@ php tests/run.php
 find . -name '*.php' -not -path './vendor/*' -print0 | xargs -0 -n 1 php -l
 ```
 
-These checks cover pure financial rules and PHP syntax. They **do not** prove Laravel integration or the accounting totals; use a disposable Akaunting installation with synthetic records for integration, ACL, tenant isolation and export tests.
+These checks cover pure financial rules, the native view contract and PHP syntax. They **do not** prove full browser integration or accounting totals; use a disposable Akaunting installation with synthetic records for integration, ACL, tenant isolation and export tests.
 
 ### Design boundaries
 
@@ -53,7 +59,11 @@ These checks cover pure financial rules and PHP syntax. They **do not** prove La
 
 ### Development status
 
-**Prototype / pre-release.** The PHP business-rule harness passes, but the module has **not** passed integration testing or reconciliation against live records. Do not install in production until the [release gate](docs/reconciliation.md) is complete.
+**Pre-release / pull request under review.** The module requires full integration and
+visual/usability review in the target Akaunting version before merging. A previous
+read-only reconciliation showed transaction-level financial parity with the source ledger,
+but each change must preserve that parity. Never commit private reconciliation output,
+customer data, or machine identifiers.
 
 ## License
 
