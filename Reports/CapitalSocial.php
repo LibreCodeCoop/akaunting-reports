@@ -249,6 +249,12 @@ final class CapitalSocial extends Report
                     default => true,
                 }
             ));
+            // Match Akaunting's sortable links: the initially selected order
+            // must be visible in the column header, not only applied internally.
+            // Only set a default when the user has not selected any column.
+            if (!request()->has('sort')) {
+                request()->merge(['sort' => 'pending', 'direction' => 'desc']);
+            }
             $this->sortedMembers = CapitalSocialSorter::sort(
                 $members, 'overview', request()->query('sort'), request()->query('direction')
             );

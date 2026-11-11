@@ -120,7 +120,7 @@
             </div>
 
             <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <x-table aria-label="Posição do capital social por cooperado">
+                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1140px;">
                     <x-table.thead>
                         <x-table.tr>
                             <x-table.th class="w-3/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
@@ -128,7 +128,7 @@
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="retained_cents" title="Retenção na produção" /></x-table.th>
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
-                            <x-table.th class="w-1/12"><x-sortablelink column="pending" title="Pendências" /></x-table.th>
+                            <x-table.th class="w-1/12" title="Pendências não confirmadas"><x-sortablelink column="pending" title="Pend." :arguments="['title' => 'Ordenar por pendências']" /></x-table.th>
                         </x-table.tr>
                     </x-table.thead>
                     <x-table.tbody>
@@ -143,15 +143,22 @@
                                 <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
                                 <x-table.td kind="amount" class="w-2/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
                                 <x-table.td class="w-1/12">
-                                    @if ($member['pending'] > 0)
-                                        <span class="text-yellow-700 font-medium">{{ $member['pending'] }} pendente(s)</span>
-                                    @endif
-                                    @if ($member['warnings'] > 0)
-                                        <div class="text-xs text-yellow-700">{{ $member['warnings'] }} ressalva(s)</div>
-                                    @endif
-                                    @if ($member['pending'] === 0 && $member['warnings'] === 0)
-                                        <span class="text-green-700">Sem pendências</span>
-                                    @endif
+                                    <span class="inline-flex items-center gap-1 whitespace-nowrap">
+                                        @if ($member['pending'] > 0)
+                                            <span class="inline-flex items-center justify-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700"
+                                                  title="{{ $member['pending'] }} {{ $member['pending'] === 1 ? 'movimentação não confirmada' : 'movimentações não confirmadas' }}"
+                                                  aria-label="{{ $member['pending'] }} {{ $member['pending'] === 1 ? 'pendência' : 'pendências' }}">{{ $member['pending'] }}</span>
+                                        @else
+                                            <span class="text-gray-400" title="Sem pendências" aria-label="Sem pendências">—</span>
+                                        @endif
+                                        @if ($member['warnings'] > 0)
+                                            <span class="inline-flex items-center gap-1 text-xs text-yellow-700"
+                                                  title="{{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva' : 'ressalvas' }} em valores já confirmados"
+                                                  aria-label="{{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva' : 'ressalvas' }}">
+                                                <span class="material-icons text-sm" aria-hidden="true">report_problem</span>{{ $member['warnings'] }}
+                                            </span>
+                                        @endif
+                                    </span>
                                 </x-table.td>
                             </x-table.tr>
                         @empty

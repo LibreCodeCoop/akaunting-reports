@@ -98,6 +98,13 @@ check($byType['devolvido_cents'] === 1000, 'Refund metrics exclude deposits'); +
 check($byType['total_cents'] === 11500, 'Capital balance reconciles across movement types'); ++$tests;
 check($byType['pending_count'] === 1 && $byType['confirmed_count'] === 3, 'Pending does not inflate balances'); ++$tests;
 check($byType['members_count'] === 1 && $byType['movement_count'] === 4, 'Dashboard counts are source-derived'); ++$tests;
+$nativeView = file_get_contents(__DIR__ . '/../Resources/views/reports/capital-social/content.blade.php');
+check(str_contains($nativeView, 'title="Pend."')
+    && str_contains($nativeView, 'aria-label="{{ $member[\'pending\'] }} {{ $member[\'pending\'] === 1 ? \'pendência\' : \'pendências\' }}"'),
+    'Compact pending indicator retains accessible numeric count'); ++$tests;
+check(str_contains($nativeView, 'style="min-width: 1140px;"')
+    && !str_contains($nativeView, ' pendente(s)</span>'),
+    'Pending column avoids long repeated text and cramped widths'); ++$tests;
 $reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
 check(str_contains($reportSource, "parent::setViews()")
     && !str_contains($reportSource, "views['show'] ="),
@@ -109,12 +116,16 @@ check(is_file(__DIR__ . '/../Resources/views/reports/capital-social/content.blad
     'Native report is not shadowed by an independent admin page'); ++$tests;
 
 $syntheticMembers = [
-    ['name'=>'Synthetic Z', 'contact_id'=>2, 'saldo_cents'=>500,'direct_cents'=>400,'retained_cents'=>100,'devolvido_cents'=>0,'pending'=>0],
+    ['name'=>'Synthetic Z', 'contact_id'=>2, 'saldo_cents'=>20000,'direct_cents'=>19900,'retained_cents'=>100,'devolvido_cents'=>0,'pending'=>0],
     ['name'=>'Synthetic A', 'contact_id'=>1, 'saldo_cents'=>11000,'direct_cents'=>11000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>2],
     ['name'=>'Synthetic M', 'contact_id'=>3, 'saldo_cents'=>1000,'direct_cents'=>1000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>1],
 ];
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null);
-check(array_column($ordered,'contact_id') === [1,3,2], 'Default capital order sorts numeric balances desc'); ++$tests;
+check(array_column($ordered,'contact_id') === [1,3,2], 'Default capital order prioritizes actual pending counts'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'saldo_cents', 'desc');
+check(array_column($ordered,'contact_id') === [2,1,3], 'Explicit balance sorting overrides default pending priority'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'asc');
+check(array_column($ordered,'contact_id') === [2,3,1], 'User can reverse default pending priority'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'name', 'asc');
 check(array_column($ordered,'contact_id') === [1,3,2], 'Native name sort asc'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'name', 'desc');

@@ -67,3 +67,9 @@ before pagination; exports likewise include the matching sorted dataset.
 A confirmed movement can carry an audit warning without becoming pending.
 The overview displays audit reservations separately so the number of
 unconfirmed movements agrees with the detailed ledger.
+
+The member overview defaults to pending-count descending, not balance
+descending, so unconfirmed items are visible on the first page. Native sortable
+links permit all supported alternate orders. Pending counts and audit-warning
+counts remain separate, and the narrow column displays compact numeric indicators
+with accessible labels rather than repeated verbose prose.
