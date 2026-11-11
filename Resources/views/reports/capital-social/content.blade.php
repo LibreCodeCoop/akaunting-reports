@@ -121,29 +121,30 @@
             </div>
 
             <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1280px;">
+                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1520px;">
                     <x-table.thead>
                         <x-table.tr>
-                            <x-table.th class="w-3/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
-                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="direct_cents" title="Integralização direta" /></x-table.th>
+                            <x-table.th class="w-2/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
+                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="direct_cents" title="Integralização direta" /></x-table.th>
                             <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="retained_cents" title="Retenção na produção" /></x-table.th>
-                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
-                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
+                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
+                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
                             <x-table.th class="w-2/12"><x-sortablelink column="last_contribution_date" title="Última integralização" /></x-table.th>
                             <x-table.th class="w-1/12" title="Pendências não confirmadas"><x-sortablelink column="pending" title="Pend." :arguments="['title' => 'Ordenar por pendências']" /></x-table.th>
+                            <x-table.th class="w-2/12" title="Situação">Situação</x-table.th>
                         </x-table.tr>
                     </x-table.thead>
                     <x-table.tbody>
                         @forelse ($class->memberPages as $member)
                             <x-table.tr>
-                                <x-table.td class="w-3/12">
+                                <x-table.td class="w-2/12">
                                     <a href="{{ $class->reportUrl('ledger', $member['contact_id']) }}"
                                        class="font-medium text-blue-600 hover:underline">{{ $member['name'] }}</a>
                                 </x-table.td>
-                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-1/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</x-table.td>
                                 <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</x-table.td>
-                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
-                                <x-table.td kind="amount" class="w-2/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-1/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
+                                <x-table.td kind="amount" class="w-1/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
                                 <x-table.td class="w-2/12 whitespace-nowrap">
                                     {{ $member['last_contribution_date'] !== null
                                         ? company_date($member['last_contribution_date']) : '—' }}
@@ -165,6 +166,18 @@
                                             </span>
                                         @endif
                                     </span>
+                                </x-table.td>
+                                <x-table.td class="w-2/12">
+                                    @forelse ($member['status_labels'] as $label => $total)
+                                        <div class="text-xs leading-5 text-yellow-700">
+                                            <span>{{ $label }}</span>
+                                            @if ($total > 1)
+                                                <span class="font-semibold" aria-label="{{ $total }} ocorrências">×{{ $total }}</span>
+                                            @endif
+                                        </div>
+                                    @empty
+                                        <span class="text-xs text-gray-500">Sem ocorrências</span>
+                                    @endforelse
                                 </x-table.td>
                             </x-table.tr>
                         @empty

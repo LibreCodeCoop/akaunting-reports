@@ -15,9 +15,12 @@ for view, date, member, movement type and review status. CSV, print and PDF foll
 view while exports include all matching records, not only the visible page.
 The tables use Akaunting's built-in `x-table` and `x-sortablelink` components,
 with whitelisted, numeric-aware sorting applied to the complete dataset
-**before** pagination. The member view defaults to the **highest count of
-unconfirmed movements first**, with compact numeric badges for pending items and
-separate warning markers. Other sortable columns can override that default. The report bar (`report-filter`) is the native Akaunting
+**before** pagination. The member view defaults to **latest confirmed integralization first**, including
+retentions on settled production documents. Members without confirmed capital
+contributions appear last. A dedicated **Situação** column explains the actual
+pending or confirmed-with-reservation classifications, grouped by kind and count;
+compact numeric badges remain in the adjacent pending column. Column sorting
+remains available for pending counts, balances, and all supported fields. The report bar (`report-filter`) is the native Akaunting
 report filtering system; it differs from the transaction/item index search bar.
 It offers company-specific member selection, as-of date, overview pending-members
 filter, and ledger confirmation, nature and reason filters.

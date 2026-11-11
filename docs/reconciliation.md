@@ -68,11 +68,13 @@ A confirmed movement can carry an audit warning without becoming pending.
 The overview displays audit reservations separately so the number of
 unconfirmed movements agrees with the detailed ledger.
 
-The member overview defaults to pending-count descending, not balance
-descending, so unconfirmed items are visible on the first page. Native sortable
-links permit all supported alternate orders. Pending counts and audit-warning
-counts remain separate, and the narrow column displays compact numeric indicators
-with accessible labels rather than repeated verbose prose.
+The member overview defaults to **latest confirmed positive integralization
+date descending**, placing members without confirmed integralizations last.
+Native sortable links allow the user to select other columns, including pending
+count. The narrow pending-count column remains compact, while a separate Situação
+column displays grouped, localized reasons such as awaiting payment, inconsistent
+document link, or confirmed with a reservation. Both are computed from the same
+read-only ledger data; status descriptions are included in CSV and printed views.
 
 ## Historical activity, membership and account security
 

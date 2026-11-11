@@ -102,9 +102,19 @@ $nativeView = file_get_contents(__DIR__ . '/../Resources/views/reports/capital-s
 check(str_contains($nativeView, 'title="Pend."')
     && str_contains($nativeView, 'aria-label="{{ $member[\'pending\'] }} {{ $member[\'pending\'] === 1 ? \'pendência\' : \'pendências\' }}"'),
     'Compact pending indicator retains accessible numeric count'); ++$tests;
-check(str_contains($nativeView, 'style="min-width: 1280px;"')
+check(str_contains($nativeView, 'style="min-width: 1520px;"')
     && !str_contains($nativeView, ' pendente(s)</span>'),
     'Pending column avoids long repeated text and cramped widths'); ++$tests;
+check(str_contains($nativeView, '<x-sortablelink column="last_contribution_date"')
+    && str_contains($nativeView, '<x-table.th class="w-2/12" title="Situação">'),
+    'Member summary must preserve a separate explanatory status column'); ++$tests;
+$overviewMarkup = explode('</x-table>', explode('<x-table aria-label="Posição do capital social por cooperado"', $nativeView, 2)[1], 2)[0];
+preg_match_all('/<x-table\\.th[^>]*class="w-(\\d+)\\/12"/', $overviewMarkup, $thWidths);
+preg_match_all('/<x-table\\.td[^>]*class="w-(\\d+)\\/12/', $overviewMarkup, $tdWidths);
+check(count($thWidths[1])===8 && array_sum(array_map('intval',$thWidths[1]))===12,
+    'Native table headings must fit a complete 12-column grid'); ++$tests;
+check(count($tdWidths[1])===8 && array_sum(array_map('intval',$tdWidths[1]))===12,
+    'Native table cells must align with the same 12-column grid'); ++$tests;
 $reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
 check(str_contains($reportSource, "parent::setViews()")
     && !str_contains($reportSource, "views['show'] ="),
@@ -116,12 +126,18 @@ check(is_file(__DIR__ . '/../Resources/views/reports/capital-social/content.blad
     'Native report is not shadowed by an independent admin page'); ++$tests;
 
 $syntheticMembers = [
-    ['name'=>'Synthetic Z', 'contact_id'=>2, 'saldo_cents'=>20000,'direct_cents'=>19900,'retained_cents'=>100,'devolvido_cents'=>0,'pending'=>0],
-    ['name'=>'Synthetic A', 'contact_id'=>1, 'saldo_cents'=>11000,'direct_cents'=>11000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>2],
-    ['name'=>'Synthetic M', 'contact_id'=>3, 'saldo_cents'=>1000,'direct_cents'=>1000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>1],
+    ['name'=>'Synthetic Z', 'contact_id'=>2, 'saldo_cents'=>20000,'direct_cents'=>19900,'retained_cents'=>100,'devolvido_cents'=>0,'pending'=>0,'last_contribution_date'=>'2026-10-10'],
+    ['name'=>'Synthetic A', 'contact_id'=>1, 'saldo_cents'=>11000,'direct_cents'=>11000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>2,'last_contribution_date'=>'2026-03-01'],
+    ['name'=>'Synthetic M', 'contact_id'=>3, 'saldo_cents'=>1000,'direct_cents'=>1000,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>1,'last_contribution_date'=>'2026-11-05'],
 ];
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', null, null);
-check(array_column($ordered,'contact_id') === [1,3,2], 'Default capital order prioritizes actual pending counts'); ++$tests;
+check(array_column($ordered,'contact_id') === [3,2,1], 'Default shows latest confirmed capital contribution first, not pending count'); ++$tests;
+$ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'desc');
+check(array_column($ordered,'contact_id') === [1,3,2], 'Manual pending sort is still available'); ++$tests;
+$withNoContribution = [...$syntheticMembers, ['name'=>'Synthetic N','contact_id'=>4,'saldo_cents'=>0,
+    'direct_cents'=>0,'retained_cents'=>0,'devolvido_cents'=>0,'pending'=>4,'last_contribution_date'=>null]];
+$ordered = CapitalSocialSorter::sort($withNoContribution, 'overview', null, null);
+check(array_column($ordered, 'contact_id') === [3,2,1,4], 'Members without confirmed contributions appear last'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'saldo_cents', 'desc');
 check(array_column($ordered,'contact_id') === [2,1,3], 'Explicit balance sorting overrides default pending priority'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'asc');
@@ -133,7 +149,7 @@ check(array_column($ordered,'contact_id') === [2,3,1], 'Native name sort desc');
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', 'desc');
 check(array_column($ordered,'contact_id') === [1,3,2], 'Pending count uses numeric sorting'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'unknown;DROP TABLE', 'asc');
-check($ordered[0]['contact_id'] === 2, 'Untrusted sort key falls back to safe allowed column'); ++$tests;
+check($ordered[0]['contact_id'] === 3, 'Untrusted sort key falls back to safe latest-contribution ordering'); ++$tests;
 $ledgerRows = [
     ['id'=>3,'date'=>'2026-01-03','name'=>'A','source'=>'document','kind'=>'revisao','status'=>'revisar','amount_cents'=>0,'candidate_cents'=>5000,'running_balance_cents'=>1000],
     ['id'=>1,'date'=>'2026-01-01','name'=>'B','source'=>'transaction','kind'=>'integralizacao','status'=>'confirmado','amount_cents'=>1500,'candidate_cents'=>1500,'running_balance_cents'=>1500],
@@ -209,4 +225,29 @@ check(str_contains($reportSource, "'any' => 'Qualquer pendência ou ressalva'"),
     'Native member filter must include all kinds of review'); ++$tests;
 check(str_contains($reportSource, "'login_status'"),
     'Login access is a separate, explicit filter from cooperative membership'); ++$tests;
+
+$statusSummary = CapitalSocialSummary::calculate([
+    ['identity'=>'contact:21','name'=>'Synthetic A','contact_id'=>21,'kind'=>'revisao',
+     'amount_cents'=>0,'status'=>'revisar',
+     'reason'=>'Unpaid document: capital is not yet confirmed.'],
+    ['identity'=>'contact:21','name'=>'Synthetic A','contact_id'=>21,'kind'=>'revisao',
+     'amount_cents'=>0,'status'=>'revisar',
+     'reason'=>'Unpaid document: capital is not yet confirmed.'],
+    ['identity'=>'contact:21','name'=>'Synthetic A','contact_id'=>21,'kind'=>'revisao',
+     'amount_cents'=>0,'status'=>'revisar',
+     'reason'=>'Capital-related transaction references a non-capital document.'],
+    ['identity'=>'contact:21','name'=>'Synthetic A','contact_id'=>21,'kind'=>'retencao',
+     'amount_cents'=>6250,'status'=>'confirmado',
+     'reason'=>'A documented non-capital deduction was added after payment; review the source document.'],
+    ['identity'=>'contact:22','name'=>'Synthetic B','contact_id'=>22,'kind'=>'integralizacao',
+     'amount_cents'=>10000,'status'=>'confirmado','reason'=>''],
+]);
+$issues=$statusSummary['members'][0]['status_labels'] ?? [];
+check(($issues['Aguardando pagamento'] ?? 0)===2, 'Repeated unpaid reasons are grouped and counted'); ++$tests;
+check(($issues['Revisar vínculo documental'] ?? 0)===1, 'Detailed linked-document problem remains visible'); ++$tests;
+check(($issues['Confirmada com ressalva'] ?? 0)===1, 'Confirmed warning remains visible without becoming pending'); ++$tests;
+check(($statusSummary['members'][1]['status_labels'] ?? null)===[],
+    'Member with no issues has a clean status state'); ++$tests;
+check($statusSummary['pending_count']===3 && $statusSummary['total_cents']===16250,
+    'Status aggregation preserves pending count and confirmed balance'); ++$tests;
 echo "$tests business invariants passed\n";

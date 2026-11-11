@@ -352,7 +352,7 @@ final class CapitalSocial extends Report
             // must be visible in the column header, not only applied internally.
             // Only set a default when the user has not selected any column.
             if (!request()->has('sort')) {
-                request()->merge(['sort' => 'pending', 'direction' => 'desc']);
+                request()->merge(['sort' => 'last_contribution_date', 'direction' => 'desc']);
             }
             $this->sortedMembers = CapitalSocialSorter::sort(
                 $members, 'overview', request()->query('sort'), request()->query('direction')
@@ -419,7 +419,7 @@ final class CapitalSocial extends Report
                 throw new \RuntimeException('Cannot open export stream.');
             }
             if ($this->tab === 'overview') {
-                fputcsv($out, ['Cooperado', 'Integralização direta (BRL)', 'Retenções (BRL)', 'Devoluções (BRL)', 'Saldo (BRL)', 'Última integralização confirmada', 'Pendências']);
+                fputcsv($out, ['Cooperado', 'Integralização direta (BRL)', 'Retenções (BRL)', 'Devoluções (BRL)', 'Saldo (BRL)', 'Última integralização confirmada', 'Pendências', 'Situação']);
                 foreach ($this->sortedMembers as $member) {
                     fputcsv($out, [
                         self::safeCsv((string) $member['name']),
@@ -429,6 +429,13 @@ final class CapitalSocial extends Report
                         self::decimal((int) $member['saldo_cents']),
                         (string) ($member['last_contribution_date'] ?? ''),
                         (int) $member['pending'],
+                        self::safeCsv($member['status_labels'] === []
+                            ? 'Sem ocorrências'
+                            : implode('; ', array_map(
+                                static fn (string $label, int $count): string => $label . ' (' . $count . ')',
+                                array_keys($member['status_labels']),
+                                array_values($member['status_labels'])
+                            ))),
                     ]);
                 }
             } else {

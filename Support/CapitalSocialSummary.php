@@ -36,11 +36,14 @@ final class CapitalSocialSummary
                 'saldo_cents' => 0,
                 'pending' => 0,
                 'warnings' => 0,
+                'status_labels' => [],
             ];
 
             if ($row['status'] !== 'confirmado') {
                 ++$members[$key]['pending'];
                 ++$pending;
+                $label = CapitalSocialReview::label($row);
+                $members[$key]['status_labels'][$label] = ($members[$key]['status_labels'][$label] ?? 0) + 1;
                 continue;
             }
 
@@ -70,6 +73,8 @@ final class CapitalSocialSummary
             if (!empty($row['reason'])) {
                 ++$members[$key]['warnings'];
                 ++$warnings;
+                $label = CapitalSocialReview::label($row);
+                $members[$key]['status_labels'][$label] = ($members[$key]['status_labels'][$label] ?? 0) + 1;
             }
         }
 
@@ -77,6 +82,7 @@ final class CapitalSocialSummary
             if ($member['saldo_cents'] < 0) {
                 ++$member['warnings'];
                 ++$warnings;
+                $member['status_labels']['Saldo negativo'] = ($member['status_labels']['Saldo negativo'] ?? 0) + 1;
             }
         }
         unset($member);

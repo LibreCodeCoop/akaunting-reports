@@ -23,9 +23,12 @@ final class CapitalSocialSorter
     public static function sort(array $rows, string $view, mixed $column, mixed $direction): array
     {
         $allowed = $view === 'ledger' ? self::LEDGER : self::OVERVIEW;
-        $default = $view === 'ledger' ? 'date' : 'pending';
-        $key = is_string($column) && in_array($column, $allowed, true) ? $column : $default;
-        $dir = is_string($direction) && in_array(strtolower($direction), ['asc', 'desc'], true)
+        $default = $view === 'ledger' ? 'date' : 'last_contribution_date';
+        $validColumn = is_string($column) && in_array($column, $allowed, true);
+        $key = $validColumn ? $column : $default;
+        // An invalid sort key cannot alter the safe default order by supplying
+        // an otherwise valid direction. Explicit valid columns remain user-sortable.
+        $dir = $validColumn && is_string($direction) && in_array(strtolower($direction), ['asc', 'desc'], true)
             ? strtolower($direction)
             : ($key === $default ? 'desc' : 'asc');
         $factor = $dir === 'asc' ? 1 : -1;
