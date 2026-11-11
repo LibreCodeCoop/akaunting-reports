@@ -73,6 +73,8 @@ final class CapitalSocial extends Report
                 'akaunting-reports.capital.refund_code',
                 'akaunting-reports.capital.advance_category_id',
                 'akaunting-reports.capital.advance_item_id',
+                'akaunting-reports.capital.legacy_refund_category_id',
+                'akaunting-reports.capital.late_deduction_item_id',
             ])->pluck('value', 'key');
         $categoryId = (int) ($settings['akaunting-reports.capital.category_id'] ?? 0);
         $itemId = (int) ($settings['akaunting-reports.capital.item_id'] ?? 0);
@@ -87,6 +89,8 @@ final class CapitalSocial extends Report
             refundCategoryCode: (string) ($settings['akaunting-reports.capital.refund_code'] ?? 'capital-social-refund'),
             advanceCategoryId: self::positiveOrNull($settings['akaunting-reports.capital.advance_category_id'] ?? null),
             advanceItemId: self::positiveOrNull($settings['akaunting-reports.capital.advance_item_id'] ?? null),
+            legacyRefundCategoryId: self::positiveOrNull($settings['akaunting-reports.capital.legacy_refund_category_id'] ?? null),
+            lateDeductionItemId: self::positiveOrNull($settings['akaunting-reports.capital.late_deduction_item_id'] ?? null),
         );
         $this->movements = app(CapitalSocialLedger::class)->rows($policy, $this->selectedMember, $this->asOf);
         $this->capitalSummary = CapitalSocialSummary::calculate($this->movements);

@@ -20,6 +20,8 @@ final class InstallCapitalSocial extends Command
         {--refund-code=capital-social-refund : Dedicated refund category code}
         {--advance-category= : Optional legacy advance category ID}
         {--advance-item= : Optional legacy advance item ID}
+        {--legacy-refund-category= : Optional historical refund category ID}
+        {--late-deduction-item= : Optional documented post-payment deduction item ID}
         {--dry-run : Validate without modifying the database}';
 
     protected $description = 'Register a read-only capital social report for one company';
@@ -32,8 +34,12 @@ final class InstallCapitalSocial extends Command
         $refundCode = (string) $this->option('refund-code');
         $advanceCategoryId = $this->optionalPositive('advance-category');
         $advanceItemId = $this->optionalPositive('advance-item');
+        $legacyRefundCategoryId = $this->optionalPositive('legacy-refund-category');
+        $lateDeductionItemId = $this->optionalPositive('late-deduction-item');
         if (($this->option('advance-category') !== null && $advanceCategoryId === null)
-            || ($this->option('advance-item') !== null && $advanceItemId === null)) {
+            || ($this->option('advance-item') !== null && $advanceItemId === null)
+            || ($this->option('legacy-refund-category') !== null && $legacyRefundCategoryId === null)
+            || ($this->option('late-deduction-item') !== null && $lateDeductionItemId === null)) {
             $this->error('Invalid optional advance identifier.');
             return self::FAILURE;
         }
@@ -56,17 +62,27 @@ final class InstallCapitalSocial extends Command
             $this->error('The advance item is not part of the selected company.');
             return self::FAILURE;
         }
+        if ($legacyRefundCategoryId !== null && !DB::table('categories')->where('company_id', $companyId)->where('id', $legacyRefundCategoryId)->exists()) {
+            $this->error('The legacy refund category is not part of the selected company.');
+            return self::FAILURE;
+        }
+        if ($lateDeductionItemId !== null && !DB::table('items')->where('company_id', $companyId)->where('id', $lateDeductionItemId)->exists()) {
+            $this->error('The late deduction item is not part of the selected company.');
+            return self::FAILURE;
+        }
         if ($this->option('dry-run')) {
             $this->info('Validation succeeded; no database changes were made.');
             return self::SUCCESS;
         }
-        DB::transaction(static function () use ($companyId, $categoryId, $itemId, $refundCode, $advanceCategoryId, $advanceItemId): void {
+        DB::transaction(static function () use ($companyId, $categoryId, $itemId, $refundCode, $advanceCategoryId, $advanceItemId, $legacyRefundCategoryId, $lateDeductionItemId): void {
             foreach ([
                 'akaunting-reports.capital.category_id' => (string) $categoryId,
                 'akaunting-reports.capital.item_id' => (string) $itemId,
                 'akaunting-reports.capital.refund_code' => $refundCode,
                 'akaunting-reports.capital.advance_category_id' => $advanceCategoryId === null ? '' : (string) $advanceCategoryId,
                 'akaunting-reports.capital.advance_item_id' => $advanceItemId === null ? '' : (string) $advanceItemId,
+                'akaunting-reports.capital.legacy_refund_category_id' => $legacyRefundCategoryId === null ? '' : (string) $legacyRefundCategoryId,
+                'akaunting-reports.capital.late_deduction_item_id' => $lateDeductionItemId === null ? '' : (string) $lateDeductionItemId,
             ] as $key => $value) {
                 DB::table('settings')->updateOrInsert(['company_id' => $companyId, 'key' => $key], ['value' => $value]);
             }

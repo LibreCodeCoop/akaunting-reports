@@ -41,6 +41,9 @@ final class CapitalSocialLedger
                     ->orWhere('cat.code', $policy->refundCategoryCode)
                     ->orWhereRaw('LOWER(t.description) LIKE ?', ['%capital social%'])
                     ->orWhereRaw("REPLACE(LOWER(t.description), ' ', '') LIKE ?", ['%capitalsocial%']);
+                if ($policy->legacyRefundCategoryId !== null) {
+                    $query->orWhere('t.category_id', $policy->legacyRefundCategoryId);
+                }
             })
             ->select('t.id','t.contact_id','c.name','c.tax_number','t.amount','t.description',
                 't.currency_code','t.paid_at','t.type','t.category_id','cat.code as category_code');
@@ -66,7 +69,7 @@ final class CapitalSocialLedger
                             ->whereNull('ci.deleted_at');
                     });
             })
-            ->select('d.id','d.contact_id','c.name','c.tax_number','d.type','d.status',
+            ->select('d.id','d.contact_id','d.contact_name as name','c.tax_number','d.type','d.status',
                 'd.category_id','d.currency_code','d.amount','d.due_at','d.issued_at');
         if ($asOf !== null) {
             $documents->where('d.issued_at', '<=', $asOf . ' 23:59:59');
@@ -88,7 +91,7 @@ final class CapitalSocialLedger
         foreach (array_chunk(array_keys($documentsById), 250) as $chunk) {
             foreach (DB::table('document_items')
                 ->whereIn('document_id', $chunk)->whereNull('deleted_at')
-                ->select('document_id', 'item_id', 'total')->get() as $item) {
+                ->select('document_id', 'item_id', 'total', 'created_at')->get() as $item) {
                 $lineItems[(int) $item->document_id][] = $item;
             }
             $paymentQuery = DB::table('transactions')
@@ -164,6 +167,16 @@ final class CapitalSocialLedger
                 && $advancePaid === $advanceDeducted && $paid - $advancePaid === $total) {
                 $paid -= $advancePaid;
             }
+            $postPaymentDeduction = 0;
+            if ($policy->lateDeductionItemId !== null && $lastPaidAt !== null) {
+                foreach ($items as $item) {
+                    $cents = Money::cents((string) $item->total);
+                    if ((int) $item->item_id === $policy->lateDeductionItemId
+                        && $cents < 0 && (string) $item->created_at > $lastPaidAt) {
+                        $postPaymentDeduction -= $cents;
+                    }
+                }
+            }
             $zeroNetted = $document->type === 'bill' && $document->status === 'paid'
                 && $total === 0 && $paid === 0 && $capital < 0
                 && $capitalLines > 0 && $lastPaidAt !== null;
@@ -175,6 +188,7 @@ final class CapitalSocialLedger
                 'capital_lines' => $capitalLines,
                 'item_lines' => count($items),
                 'has_payment' => $hasPayment,
+                'post_payment_deduction_cents' => $postPaymentDeduction,
                 'type' => (string) $document->type,
                 'status' => (string) $document->status,
                 'currency_code' => (string) $document->currency_code,
@@ -188,7 +202,7 @@ final class CapitalSocialLedger
         return $rows;
     }
 
-    /** @param array{kind:string,amount_cents:int,reason:string} $evaluated
+    /** @param array{kind:string,amount_cents:int,reason:string,confirmed_with_warning?:bool} $evaluated
      * @return array<string,mixed>
      */
     private static function movement(string $source, int $id, int $contactId, string $identity,
@@ -203,7 +217,7 @@ final class CapitalSocialLedger
             'date' => substr($date, 0, 10),
             'kind' => $evaluated['kind'],
             'amount_cents' => $evaluated['amount_cents'],
-            'status' => $evaluated['reason'] === '' ? 'confirmado' : 'revisar',
+            'status' => ($evaluated['reason'] === '' || ($evaluated['confirmed_with_warning'] ?? false)) ? 'confirmado' : 'revisar',
             'reason' => $evaluated['reason'],
             'currency' => $currency,
         ];

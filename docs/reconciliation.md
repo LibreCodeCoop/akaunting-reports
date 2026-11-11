@@ -31,3 +31,13 @@ The inherited cooperative-production ledger has special logic for legacy advance
 - **Approved**: source revision and the release candidate SHA known, all finance differences reconciled, independent reviewer signs off, native ACL and multi-company regressions pass, GitHub CI passes on the published head.
 - **Rollout**: install through the approved standard deployment procedure, register report for the intended company, check existing financial balance and unrelated modules, monitor read-only behavior.
 - **Rollback**: disable the new module or remove the report registration **without modifying underlying financial records**. Preserve an audit log of the action in the private operations system; do not publish it.
+
+## Historical financial classifications
+
+Legacy refund category IDs and late-deduction item IDs are optional, company-specific configuration.
+Only explicit refunds with a matching description and a configured historical category qualify.
+Excess payments on production bills are accepted as confirmed retentions only when a non-capital
+negative line was added after the last payment and its amount matches the discrepancy exactly.
+Keep such cases as confirmed *with an audit warning*. Missing evidence remains pending; do not
+silently count the amount. Validate these cases against the existing cooperative-production
+ledger before enabling the module.

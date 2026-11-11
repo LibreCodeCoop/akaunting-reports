@@ -53,4 +53,22 @@ $summary = CapitalSocialSummary::calculate($rows);
 check($summary['total_cents'] === 3000, 'Aggregate checked balances'); ++$tests;
 check($summary['pending'] === 1, 'Ambiguous entries excluded and flagged'); ++$tests;
 check(count($summary['members']) === 2, 'Independent members'); ++$tests;
+$legacyPolicy = new CapitalSocialPolicy(companyId: 1, categoryId: 4, itemId: 8, legacyRefundCategoryId: 16);
+$legacyRefund = [...$entry, 'type' => 'expense', 'category_id' => 16, 'description' => 'Devolucao de capital social'];
+check(CapitalSocialRules::transaction($legacyRefund, $legacyPolicy)['amount_cents'] === -12345, 'Classified legacy refund'); ++$tests;
+check(CapitalSocialRules::transaction([...$legacyRefund, 'description' => 'Unrelated payment'], $legacyPolicy)['kind'] === 'revisao', 'Other expenses cannot become refunds'); ++$tests;
+check(CapitalSocialRules::transaction($legacyRefund, $policy)['kind'] === 'revisao', 'Legacy refund requires opt-in'); ++$tests;
+$late = [...$base, 'type' => 'bill', 'status' => 'paid', 'capital_cents' => -500,
+    'paid_cents' => 4000, 'post_payment_deduction_cents' => 1000];
+$lateResult = CapitalSocialRules::document($late);
+check($lateResult['kind'] === 'retencao' && $lateResult['amount_cents'] === 500, 'Documented late deduction retains confirmed capital'); ++$tests;
+check(($lateResult['confirmed_with_warning'] ?? false) && $lateResult['reason'] !== '', 'Late deduction remains auditable'); ++$tests;
+check(CapitalSocialRules::document([...$late, 'post_payment_deduction_cents' => 900])['kind'] === 'revisao', 'Mismatched late deduction remains pending'); ++$tests;
+check(CapitalSocialRules::document([...$late, 'post_payment_deduction_cents' => 0])['kind'] === 'revisao', 'Excess payment without evidence remains pending'); ++$tests;
+check(CapitalSocialRules::document([...$late, 'type' => 'invoice'])['kind'] === 'revisao', 'Late deduction exception is bill-only'); ++$tests;
+check(CapitalSocialRules::document([...$late, 'status' => 'draft'])['kind'] === 'revisao', 'Unpaid bill cannot use exception'); ++$tests;
+try {
+    new CapitalSocialPolicy(companyId: 1, categoryId: 4, itemId: 8, legacyRefundCategoryId: -1);
+    throw new RuntimeException('Negative legacy refund category was accepted');
+} catch (InvalidArgumentException) { ++$tests; }
 echo "$tests business invariants passed\n";
