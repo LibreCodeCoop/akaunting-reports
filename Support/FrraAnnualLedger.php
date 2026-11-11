@@ -74,6 +74,12 @@ final class FrraAnnualLedger
                 ++$result['excluded_status_count'];
                 continue;
             }
+            // Exclude non-BRL items before both monthly allocation and
+            // historical unallocated totals, which are displayed in BRL.
+            if ($row->currency_code !== 'BRL') {
+                ++$result['non_brl_count'];
+                continue;
+            }
             $competence = FrraAnnualMatrix::competence((string) $row->description);
             if ($competence === null) {
                 ++$result['undated_count'];
@@ -92,10 +98,6 @@ final class FrraAnnualLedger
                         ++$result['invalid_amount_count'];
                     }
                 }
-                continue;
-            }
-            if ($row->currency_code !== 'BRL') {
-                ++$result['non_brl_count'];
                 continue;
             }
             try {

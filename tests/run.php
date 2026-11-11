@@ -515,4 +515,43 @@ check(str_contains($frraLedgerSource, '->where(\'d.company_id\', $companyId)')
     && str_contains($frraLedgerSource, "->whereNull('d.deleted_at')")
     && str_contains($frraLedgerSource, "->whereNull('i.deleted_at')"),
     'FRRA ledger enforces company isolation and excludes deleted records'); ++$tests;
+// Synthetic read-only database double exercises the whole ledger pathway.
+// In particular, ambiguous historical values must not be labelled BRL if
+// their documents use another currency.
+final class SyntheticFrraQuery
+{
+    public function __call(string $name, array $args): self { return $this; }
+    public function get(): array
+    {
+        $row = static function (int $id, string $currency, string $description, string $amount): object {
+            return (object) [
+                'item_id' => $id, 'document_id' => $id, 'document_number' => 'PDC-2026-' . $id,
+                'contact_id' => 10, 'contact_name' => 'Synthetic member', 'current_contact_name' => null,
+                'category_id' => 11, 'status' => 'draft', 'currency_code' => $currency,
+                'item_name' => 'FRRA', 'description' => $description, 'total' => $amount,
+            ];
+        };
+        return [
+            $row(1, 'USD', 'Referente ao ano 2026 - meses de janeiro a março', '12.00'),
+            $row(2, 'BRL', 'Referente ao ano 2026 - meses de janeiro a março', '7.00'),
+            $row(3, 'EUR', 'Referente ao ano/mês: 2026-02', '4.00'),
+            $row(4, 'BRL', 'Referente ao ano/mês: 2026-02', '3.00'),
+        ];
+    }
+}
+final class SyntheticFrraDb
+{
+    public static function table(string $name): SyntheticFrraQuery { return new SyntheticFrraQuery(); }
+}
+class_alias(SyntheticFrraDb::class, 'Illuminate\Support\Facades\DB');
+require_once __DIR__ . '/../Support/FrraAnnualLedger.php';
+$frraLedger = \Modules\AkauntingReports\Support\FrraAnnualLedger::read(1, [
+    'production_category_id' => 11, 'annual_category_id' => 12,
+    'production_prefix' => 'PDC-', 'annual_prefix' => 'FRRA-', 'item_name' => 'FRRA',
+]);
+check($frraLedger['non_brl_count'] === 2 && $frraLedger['undated_count'] === 1,
+    'Foreign-currency FRRA is excluded before both dated and undated BRL aggregation'); ++$tests;
+check($frraLedger['unallocated_by_year'][2026]['cents'] === 700
+    && count($frraLedger['entries']) === 1 && $frraLedger['entries'][0]['amount_cents'] === 300,
+    'Undated BRL summary and dated ledger exclude synthetic USD and EUR amounts'); ++$tests;
 echo "$tests business invariants passed\n";
