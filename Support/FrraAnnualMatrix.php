@@ -15,6 +15,46 @@ final class FrraAnnualMatrix
 {
     private const MONTHS = 12;
 
+    /**
+     * Offer only years represented by audited FRRA records, including historical
+     * amounts with an identifiable year but no reliable monthly competence.
+     * When the company has no FRRA records yet, retain the current year.
+     *
+     * @param list<array<string,mixed>> $entries
+     * @param array<int,array{items:int,cents:int}> $unallocatedByYear
+     * @return array<int,string>
+     */
+    public static function yearOptions(array $entries, array $unallocatedByYear, int $currentYear): array
+    {
+        $years = [];
+        foreach ($entries as $entry) {
+            $competence = (string) ($entry['competence'] ?? '');
+            if (!preg_match('/^(20\d{2})-(0[1-9]|1[0-2])$/D', $competence, $matches)
+                || (int) ($entry['contact_id'] ?? 0) <= 0
+                || !in_array((string) ($entry['source'] ?? ''), ['production', 'annual'], true)) {
+                continue;
+            }
+            $years[(int) $matches[1]] = true;
+        }
+
+        foreach ($unallocatedByYear as $year => $details) {
+            if ((int) $year >= 2000 && (int) $year <= 2099
+                && (int) ($details['items'] ?? 0) > 0) {
+                $years[(int) $year] = true;
+            }
+        }
+
+        if ($years === []) {
+            $years[$currentYear] = true;
+        }
+        krsort($years, SORT_NUMERIC);
+        $options = [];
+        foreach (array_keys($years) as $year) {
+            $options[$year] = (string) $year;
+        }
+        return $options;
+    }
+
     /** @param list<array<string,mixed>> $entries
      * @return array<string,mixed>
      */

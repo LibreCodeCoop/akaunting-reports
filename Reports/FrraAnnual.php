@@ -64,7 +64,7 @@ final class FrraAnnual extends Report
             'name' => 'year',
             'title' => 'Ano de competência',
             'values' => $this->yearOptions(),
-            'selected' => $this->configuredYear(),
+            'selected' => $this->defaultYear(),
             'placement' => 'strip',
             'attributes' => [],
         ]];
@@ -76,7 +76,7 @@ final class FrraAnnual extends Report
         $this->filters['year'] = $this->yearOptions();
         $this->filters['keys']['year'] = 'year';
         $this->filters['names']['year'] = 'Ano de competência';
-        $this->filters['defaults']['year'] = (string) $this->configuredYear();
+        $this->filters['defaults']['year'] = (string) $this->defaultYear();
         $this->filters['operators']['year'] = [
             'equal' => true, 'not_equal' => false, 'multiple' => false, 'range' => false,
         ];
@@ -202,8 +202,9 @@ final class FrraAnnual extends Report
     private function requestedYear(): int
     {
         $value = $this->getSearchStringValue('year');
-        return is_string($value) && preg_match('/^20\d{2}$/D', $value)
-            && (int) $value <= 2100 ? (int) $value : $this->configuredYear();
+        $years = $this->yearOptions();
+        return is_string($value) && isset($years[$value])
+            ? (int) $value : $this->defaultYear();
     }
 
     private function configuredYear(): int
@@ -213,17 +214,26 @@ final class FrraAnnual extends Report
             && (int) $value <= 2100 ? (int) $value : (int) Date::today()->year;
     }
 
-    /** @return array<string,string> */
+    private function defaultYear(): int
+    {
+        $years = $this->yearOptions();
+        $saved = $this->configuredYear();
+        if (isset($years[$saved])) {
+            return $saved;
+        }
+        $current = (int) Date::today()->year;
+        return isset($years[$current]) ? $current : (int) array_key_first($years);
+    }
+
+    /** @return array<int,string> */
     private function yearOptions(): array
     {
-        $current = (int) Date::today()->year;
-        $years = [];
-        for ($year = $current + 1; $year >= min(2020, $current - 15); --$year) {
-            $years[(string) $year] = (string) $year;
-        }
-        $saved = (string) $this->configuredYear();
-        $years[$saved] ??= $saved;
-        return $years;
+        $ledger = $this->readSources((int) company_id());
+        return FrraAnnualMatrix::yearOptions(
+            $ledger['entries'] ?? [],
+            $ledger['unallocated_by_year'] ?? [],
+            (int) Date::today()->year
+        );
     }
 
     private static function decimal(int $cents): string

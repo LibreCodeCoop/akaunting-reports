@@ -462,6 +462,30 @@ check($frraEmpty['members_count'] === 0 && $frraEmpty['total_cents'] === 0
     && count($frraEmpty['months'])===12,
     'FRRA empty year remains a full zeroed twelve-month report'); ++$tests;
 
+$availableFrraYears = \Modules\AkauntingReports\Support\FrraAnnualMatrix::yearOptions(
+    $frraEntries,
+    [2023 => ['items'=>2,'cents'=>700], 2024 => ['items'=>0,'cents'=>0]],
+    2026
+);
+check($availableFrraYears === [2026=>'2026', 2025=>'2025', 2023=>'2023'],
+    'Year filter only lists populated and explicitly identified historical FRRA years'); ++$tests;
+check(!isset($availableFrraYears[2020]) && !isset($availableFrraYears[2024])
+    && !isset($availableFrraYears[2027]),
+    'Empty past, gap and future years are not offered by default'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::yearOptions([], [], 2026)
+    === [2026=>'2026'],
+    'A company without FRRA still offers the current year for an empty report'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::yearOptions(
+    [], [2022 => ['items'=>1,'cents'=>0]], 2026
+) === [2022=>'2022'],
+    'A historical year with unresolved monthly competence remains selectable'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::yearOptions([
+    ['contact_id'=>0,'source'=>'production','competence'=>'2021-05'],
+    ['contact_id'=>10,'source'=>'other','competence'=>'2022-03'],
+    ['contact_id'=>10,'source'=>'annual','competence'=>'2023-13'],
+], [], 2026) === [2026=>'2026'],
+    'Ineligible contacts, sources and malformed competences cannot invent year choices'); ++$tests;
+
 $frraOptions = \Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraEntries, 2026);
 check(count($frraOptions) === 2 && $frraOptions[101] === 'Cooperada Alfa'
     && $frraOptions[202] === 'Cooperado Beta',
@@ -505,6 +529,8 @@ $frraSource=file_get_contents(__DIR__ . '/../Reports/FrraAnnual.php');
 check(str_contains($frraSource, 'StreamedResponse')
     && str_contains($frraSource, "'Content-Type' => 'text/csv; charset=UTF-8'")
     && str_contains($frraSource, "FrraAnnualMatrix::memberOptions(")
+    && str_contains($frraSource, "FrraAnnualMatrix::yearOptions(")
+    && !str_contains($frraSource, 'min(2020, $current - 15)')
     && !str_contains($frraSource, "->where('type', 'vendor')"),
     'FRRA native report supports CSV and only audited FRRA members, never the full vendors directory'); ++$tests;
 check(str_contains($frraSource, 'private ?array $sourceLedger = null;')
