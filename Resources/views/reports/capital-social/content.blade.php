@@ -124,7 +124,7 @@
             <div class="mb-3 flex flex-wrap items-center gap-3 text-xs lg:hidden" aria-label="Ordenação">
                 <span class="text-gray-500">Ordenar:</span>
                 <x-sortablelink column="last_contribution_date" title="Recentes" />
-                <x-sortablelink column="pending" title="Pendências" />
+                <x-sortablelink column="pending" title="Pendências e ressalvas" />
                 <x-sortablelink column="saldo_cents" title="Saldo" />
                 <details class="w-full text-xs text-gray-500">
                     <summary class="cursor-pointer">Outras ordenações</summary>
@@ -167,7 +167,7 @@
                             </x-table.th>
                             <x-table.th override="class" class="lg:w-4/12 min-w-0 px-2 py-3 text-xs font-medium text-black text-left rtl:text-right">
                                 <x-slot name="first">
-                                    <x-sortablelink column="pending" title="Pendências" />
+                                    <x-sortablelink column="pending" title="Pendências e ressalvas" />
                                 </x-slot>
                                 <x-slot name="second">
                                     Situação e ressalvas

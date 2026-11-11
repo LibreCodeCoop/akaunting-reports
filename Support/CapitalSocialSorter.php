@@ -21,7 +21,7 @@ final class CapitalSocialSorter
     public static function overviewOptions(): array
     {
         return [
-            'pending' => 'Pendências',
+            'pending' => 'Pendências e ressalvas',
             'last_contribution_date' => 'Última integralização',
             'saldo_cents' => 'Saldo',
             'name' => 'Cooperado',
@@ -146,6 +146,13 @@ final class CapitalSocialSorter
         $diff = in_array($key, self::NUMERIC, true)
             ? ((int) $left <=> (int) $right)
             : strnatcasecmp((string) $left, (string) $right);
+
+        if ($key === 'pending' && $diff === 0) {
+            // The overview's review cell combines two distinct classifications.
+            // A confirmed reservation is not a pending movement, but it must
+            // appear before a completely clean member when review is sorted.
+            $diff = (int) ($a['warnings'] ?? 0) <=> (int) ($b['warnings'] ?? 0);
+        }
 
         return $direction === 'desc' ? -$diff : $diff;
     }

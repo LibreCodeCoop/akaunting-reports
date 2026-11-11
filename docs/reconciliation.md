@@ -70,7 +70,9 @@ unconfirmed movements agrees with the detailed ledger.
 
 The member overview uses three independently configurable sort levels,
 stored in the existing per-report Akaunting settings object and evaluated before
-pagination: **pending movement count descending**, then **last confirmed
+pagination: **unconfirmed pending movement count descending**, then
+**confirmed audit reservation count descending** as a tie-breaker within the
+combined Pendências e ressalvas status, followed by **last confirmed
 contribution descending**, then **member name ascending**. All columns are
 allowlisted, and invalid settings fall back to their respective defaults.
 Manual native column sorting replaces only the primary criterion while keeping

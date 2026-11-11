@@ -16,9 +16,12 @@ view while exports include all matching records, not only the visible page.
 The tables use Akaunting's built-in `x-table` and `x-sortablelink` components,
 with whitelisted, numeric-aware sorting applied to the complete dataset
 **before** pagination. The default is a three-stage, per-report order:
-**pending movements descending**, **last confirmed contribution descending**,
-then **member name ascending**. Configure each column and direction under Edit
-report; a click on a native sortable column changes only the first criterion,
+**pending movements descending, then confirmed audit reservations descending**
+(within the same visible review-status criterion), **last confirmed contribution
+descending**, then **member name ascending**. A reservation does not become an
+unconfirmed financial movement; it simply precedes members with no issues.
+Configure each column and direction under Edit report; clicking a native
+sortable column changes only the first criterion,
 retaining the configured second and third tie-breakers. Repeated columns are
 skipped and the contact ID guarantees deterministic final ordering. Members
 without confirmed contributions come last when sorting by activity date in

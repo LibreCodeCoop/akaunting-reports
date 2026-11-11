@@ -99,7 +99,7 @@ check($byType['total_cents'] === 11500, 'Capital balance reconciles across movem
 check($byType['pending_count'] === 1 && $byType['confirmed_count'] === 3, 'Pending does not inflate balances'); ++$tests;
 check($byType['members_count'] === 1 && $byType['movement_count'] === 4, 'Dashboard counts are source-derived'); ++$tests;
 $nativeView = file_get_contents(__DIR__ . '/../Resources/views/reports/capital-social/content.blade.php');
-check(str_contains($nativeView, 'column="pending" title="Pendências"')
+check(str_contains($nativeView, 'column="pending" title="Pendências e ressalvas"')
     && str_contains($nativeView, 'aria-label="{{ $member[\'pending\'] }} {{ $member[\'pending\'] === 1 ? \'pendência\' : \'pendências\' }}"'),
     'Combined issue column retains native sorting and accessible pending counts'); ++$tests;
 $beforeOverviewTable = explode('<x-table aria-label="Posição do capital social por cooperado"', $nativeView, 2)[0];
@@ -271,6 +271,32 @@ $descendingThird = CapitalSocialSorter::sort(
 );
 check(array_column($descendingThird,'contact_id') === [5,1,2],
     'Third criterion direction is independently configurable'); ++$tests;
+$mixedReviewRows = [
+    ['contact_id'=>1001,'name'=>'Synthetic Pending Latest','pending'=>1,'warnings'=>0,'last_contribution_date'=>'2026-10-10'],
+    ['contact_id'=>1002,'name'=>'Synthetic Pending Older','pending'=>1,'warnings'=>0,'last_contribution_date'=>'2021-01-08'],
+    ['contact_id'=>1003,'name'=>'Alpha Clear','pending'=>0,'warnings'=>0,'last_contribution_date'=>'2026-11-11'],
+    ['contact_id'=>1004,'name'=>'Zulu With Reservation','pending'=>0,'warnings'=>1,'last_contribution_date'=>'2026-11-11'],
+    ['contact_id'=>1005,'name'=>'Older Clear','pending'=>0,'warnings'=>0,'last_contribution_date'=>'2026-02-01'],
+];
+$reviewFirst = CapitalSocialSorter::sort($mixedReviewRows,'overview',null,null);
+check(array_column($reviewFirst,'contact_id') === [1001,1002,1004,1003,1005],
+    'Default grouped status sorting must put confirmed reservations before clean members'); ++$tests;
+$reviewManual = CapitalSocialSorter::sort($mixedReviewRows,'overview','pending','desc',
+    'pending','desc', [
+        ['column'=>'last_contribution_date','direction'=>'desc'],
+        ['column'=>'name','direction'=>'asc'],
+    ]);
+check(array_column($reviewManual,'contact_id') === [1001,1002,1004,1003,1005],
+    'Native descending review sort and saved recency must agree with visible badges'); ++$tests;
+$reviewAscending = CapitalSocialSorter::sort($mixedReviewRows,'overview','pending','asc');
+check(array_column($reviewAscending,'contact_id') === [1003,1005,1004,1001,1002],
+    'Ascending review sort reverses unconfirmed and reservation severity'); ++$tests;
+$reviewCustomRecency = CapitalSocialSorter::sort($mixedReviewRows,'overview',null,null,'pending','desc', [
+    ['column'=>'name','direction'=>'asc'],
+    ['column'=>'last_contribution_date','direction'=>'desc'],
+]);
+check(array_column($reviewCustomRecency,'contact_id') === [1001,1002,1004,1003,1005],
+    'Custom secondary name sorting remains active within equal pending and reservation counts'); ++$tests;
 $ledgerRows = [
     ['id'=>3,'date'=>'2026-01-03','name'=>'A','source'=>'document','kind'=>'revisao','status'=>'revisar','amount_cents'=>0,'candidate_cents'=>5000,'running_balance_cents'=>1000],
     ['id'=>1,'date'=>'2026-01-01','name'=>'B','source'=>'transaction','kind'=>'integralizacao','status'=>'confirmado','amount_cents'=>1500,'candidate_cents'=>1500,'running_balance_cents'=>1500],
