@@ -12,6 +12,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Support\CapitalSocialLedger;
 use Modules\AkauntingReports\Support\CapitalSocialPolicy;
+use Modules\AkauntingReports\Support\CapitalSocialReview;
+use Modules\AkauntingReports\Support\CapitalSocialSorter;
 use Modules\AkauntingReports\Support\CapitalSocialSummary;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -42,6 +44,12 @@ final class CapitalSocial extends Report
     public ?int $selectedMember = null;
     public ?string $selectedStatus = null;
     public ?string $selectedKind = null;
+    public ?string $selectedReviewReason = null;
+    public ?string $selectedMemberReview = null;
+    /** @var list<array<string,mixed>> */
+    public array $sortedMembers = [];
+    /** @var array{confirmed:int,awaiting_payment:int,requires_review:int} */
+    public array $reviewCounts = ['confirmed' => 0, 'awaiting_payment' => 0, 'requires_review' => 0];
     public ?string $configurationError = null;
 
     public function setViews(): void
@@ -168,11 +176,18 @@ final class CapitalSocial extends Report
             fn (array $row): bool => $this->selectedMember === null || $row['contact_id'] === $this->selectedMember
         ));
         $this->capitalSummary = CapitalSocialSummary::calculate($this->movements);
+        $this->reviewCounts = CapitalSocialReview::counts($this->movements);
 
         if ($this->tab === 'ledger') {
             $this->filters['status'] = ['confirmado' => 'Confirmadas', 'revisar' => 'A conferir'];
             $this->filters['keys']['status'] = 'status';
-            $this->filters['names']['status'] = 'Situação';
+            $this->filters['names']['status'] = 'Confirmação';
+            $this->filters['review_reason'] = [
+                'awaiting_payment' => 'Aguardando pagamento',
+                'requires_review' => 'Conferência necessária',
+            ];
+            $this->filters['keys']['review_reason'] = 'review_reason';
+            $this->filters['names']['review_reason'] = 'Motivo da pendência';
             $this->filters['kind'] = [
                 'integralizacao' => 'Integralização direta',
                 'retencao' => 'Retenção na produção',
@@ -185,6 +200,10 @@ final class CapitalSocial extends Report
             $kind = $this->getSearchStringValue('kind');
             $this->selectedStatus = is_string($status) && isset($this->filters['status'][$status]) ? $status : null;
             $this->selectedKind = is_string($kind) && isset($this->filters['kind'][$kind]) ? $kind : null;
+            $reviewReason = $this->getSearchStringValue('review_reason');
+            $this->selectedReviewReason = is_string($reviewReason)
+                && isset($this->filters['review_reason'][$reviewReason])
+                ? $reviewReason : null;
 
             $balances = [];
             usort($this->movements, static fn (array $a, array $b): int =>
@@ -202,17 +221,38 @@ final class CapitalSocial extends Report
             $this->movements = array_values(array_filter($this->movements, fn (array $row): bool =>
                 ($this->selectedStatus === null || $row['status'] === $this->selectedStatus)
                 && ($this->selectedKind === null || $row['kind'] === $this->selectedKind)
+                && ($this->selectedReviewReason === null
+                    || CapitalSocialReview::category($row) === $this->selectedReviewReason)
             ));
-            usort($this->movements, static fn (array $a, array $b): int =>
-                [$b['date'], $b['source'], $b['id']] <=> [$a['date'], $a['source'], $a['id']]
+            $this->movements = CapitalSocialSorter::sort(
+                $this->movements, 'ledger', request()->query('sort'), request()->query('direction')
             );
             $this->movementPages = $this->paginate($this->movements, 25);
         } else {
-            $members = $this->capitalSummary['members'];
-            usort($members, static fn (array $a, array $b): int =>
-                [$b['saldo_cents'], $a['name']] <=> [$a['saldo_cents'], $b['name']]
+            $this->filters['member_review'] = [
+                'pending' => 'Com valores não confirmados',
+                'warning' => 'Com ressalvas',
+                'clear' => 'Sem pendências ou ressalvas',
+            ];
+            $this->filters['keys']['member_review'] = 'member_review';
+            $this->filters['names']['member_review'] = 'Pendências por cooperado';
+            $memberReview = $this->getSearchStringValue('member_review');
+            $this->selectedMemberReview = is_string($memberReview)
+                && isset($this->filters['member_review'][$memberReview])
+                ? $memberReview : null;
+            $members = array_values(array_filter(
+                $this->capitalSummary['members'],
+                fn (array $member): bool => match ($this->selectedMemberReview) {
+                    'pending' => $member['pending'] > 0,
+                    'warning' => $member['warnings'] > 0,
+                    'clear' => $member['pending'] === 0 && $member['warnings'] === 0,
+                    default => true,
+                }
+            ));
+            $this->sortedMembers = CapitalSocialSorter::sort(
+                $members, 'overview', request()->query('sort'), request()->query('direction')
             );
-            $this->memberPages = $this->paginate($members, 15);
+            $this->memberPages = $this->paginate($this->sortedMembers, 15);
         }
     }
 
@@ -229,18 +269,36 @@ final class CapitalSocial extends Report
         ))->appends(request()->except('page'));
     }
 
-    public function reportUrl(string $tab, ?int $memberId = null): string
+    public function reportUrl(string $tab, ?int $memberId = null, ?string $status = null): string
     {
-        $tokens = ['view:' . ($tab === 'ledger' ? 'ledger' : 'overview')];
-        if ($this->asOf !== null) {
+        // Reuse the exact native report filter string; only change the view
+        // and (if requested) the member/status selection.
+        $search = request()->query('search', '');
+        $tokens = is_string($search) ? preg_split('/\s+/', trim($search)) : [];
+        $tokens = array_values(array_filter($tokens ?: [], static function (string $token) use ($tab, $status): bool {
+            if (preg_match('/^(view|member|member_review):/', $token)) {
+                return false;
+            }
+            if ($tab !== 'ledger' && preg_match('/^(kind|status|review_reason):/', $token)) {
+                return false;
+            }
+            return $status === null || !str_starts_with($token, 'status:');
+        }));
+        $tokens[] = 'view:' . ($tab === 'ledger' ? 'ledger' : 'overview');
+        if ($this->asOf !== null && !array_filter($tokens, static fn (string $token): bool =>
+            str_starts_with($token, 'as_of:'))) {
             $tokens[] = 'as_of:' . $this->asOf;
         }
         if ($memberId !== null && $memberId > 0) {
             $tokens[] = 'member:' . $memberId;
         }
-        return route('reports.show', $this->model->id) . '?' . http_build_query([
-            'search' => implode(' ', $tokens),
-        ]);
+        if ($status !== null && in_array($status, ['confirmado', 'revisar'], true)) {
+            $tokens[] = 'status:' . $status;
+        }
+
+        $query = request()->except(['search', 'sort', 'direction', 'page', 'tab']);
+        $query['search'] = implode(' ', $tokens);
+        return route('reports.show', $this->model->id) . '?' . http_build_query($query);
     }
 
     private static function positiveOrNull(mixed $value): ?int
@@ -257,7 +315,7 @@ final class CapitalSocial extends Report
             }
             if ($this->tab === 'overview') {
                 fputcsv($out, ['Cooperado', 'Integralização direta (BRL)', 'Retenções (BRL)', 'Devoluções (BRL)', 'Saldo (BRL)', 'Pendências']);
-                foreach ($this->capitalSummary['members'] as $member) {
+                foreach ($this->sortedMembers as $member) {
                     fputcsv($out, [
                         self::safeCsv((string) $member['name']),
                         self::decimal((int) $member['direct_cents']),

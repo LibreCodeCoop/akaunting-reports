@@ -34,6 +34,7 @@ final class CapitalSocialSummary
                 'devolvido_cents' => 0,
                 'saldo_cents' => 0,
                 'pending' => 0,
+                'warnings' => 0,
             ];
 
             if ($row['status'] !== 'confirmado') {
@@ -58,14 +59,14 @@ final class CapitalSocialSummary
             $members[$key]['saldo_cents'] += $amount;
 
             if (!empty($row['reason'])) {
-                ++$members[$key]['pending'];
+                ++$members[$key]['warnings'];
                 ++$warnings;
             }
         }
 
         foreach ($members as &$member) {
             if ($member['saldo_cents'] < 0) {
-                ++$member['pending'];
+                ++$member['warnings'];
                 ++$warnings;
             }
         }
