@@ -26,4 +26,4 @@ jobs:
       - name: Business-rule tests
         run: php tests/run.php
       - name: Validate module manifest
-        run: php -r '$m=json_decode(file_get_contents("module.json"),true,512,JSON_THROW_ON_ERROR); if(($m["alias"]??null)!=="akaunting-reports" || count($m["reports"]??[])!==1)exit(1);'
+        run: php -r '$m=json_decode(file_get_contents("module.json"),true,512,JSON_THROW_ON_ERROR); $required=["Modules\\AkauntingReports\\Reports\\CapitalSocial","Modules\\AkauntingReports\\Reports\\FrraAnnual"]; $actual=$m["reports"]??[]; sort($required); sort($actual); if(($m["alias"]??null)!=="akaunting-reports" || $actual!==$required)exit(1);'
