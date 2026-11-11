@@ -150,7 +150,7 @@ final class CapitalSocialLedger
             $evaluated = CapitalSocialRules::transaction((array) $entry, $policy);
             $rows[] = self::movement('transaction', (int) $entry->id, $identities[$key], $key,
                 (string) $entry->name, (string) $entry->paid_at, $evaluated,
-                (string) $entry->currency_code);
+                (string) $entry->currency_code, null, abs(Money::cents((string) $entry->amount)));
         }
         foreach ($invoices as $document) {
             $id = (int) $document->id;
@@ -223,7 +223,7 @@ final class CapitalSocialLedger
             ]);
             $rows[] = self::movement('document', $id, $identities[$key], $key,
                 (string) $document->name, $lastPaidAt ?? (string) $document->due_at,
-                $evaluated, (string) $document->currency_code);
+                $evaluated, (string) $document->currency_code, (string) $document->type, abs($capital));
         }
         usort($rows, static fn(array $a, array $b): int => [$a['name'], $a['date'], $a['source'], $a['id']]
             <=> [$b['name'], $b['date'], $b['source'], $b['id']]);
@@ -234,10 +234,12 @@ final class CapitalSocialLedger
      * @return array<string,mixed>
      */
     private static function movement(string $source, int $id, int $contactId, string $identity,
-        string $name, string $date, array $evaluated, string $currency): array
+        string $name, string $date, array $evaluated, string $currency,
+        ?string $documentType = null, int $candidateCents = 0): array
     {
         return [
             'source' => $source,
+            'document_type' => $documentType,
             'id' => $id,
             'contact_id' => $contactId,
             'identity' => $identity,
@@ -245,6 +247,7 @@ final class CapitalSocialLedger
             'date' => substr($date, 0, 10),
             'kind' => $evaluated['kind'],
             'amount_cents' => $evaluated['amount_cents'],
+            'candidate_cents' => $candidateCents,
             'status' => ($evaluated['reason'] === '' || ($evaluated['confirmed_with_warning'] ?? false)) ? 'confirmado' : 'revisar',
             'reason' => $evaluated['reason'],
             'currency' => $currency,
