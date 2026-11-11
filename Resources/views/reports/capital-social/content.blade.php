@@ -95,7 +95,7 @@
             @endif
         </div>
 
-        <nav aria-label="Visões do relatório" class="mb-6 flex gap-6 border-b border-gray-200">
+        <nav aria-label="Visões do relatório" class="mb-6 flex flex-wrap gap-3 border-b border-gray-200">
             <a href="{{ $class->reportUrl('overview') }}"
                class="{{ $class->tab === 'overview' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-black-400' }} inline-flex items-center gap-2 border-b-2 px-2 py-3 text-sm font-medium"
                @if ($class->tab === 'overview') aria-current="page" @endif>
@@ -120,64 +120,125 @@
                 <span class="text-sm text-gray-500">{{ count($class->sortedMembers) }} cooperados encontrados</span>
             </div>
 
-            <div class="mb-4 overflow-x-auto rounded-lg border border-gray-200 bg-white">
-                <x-table aria-label="Posição do capital social por cooperado" style="min-width: 1520px;">
-                    <x-table.thead>
+            {{-- Keep Akaunting's sortable links available when desktop headings are stacked away. --}}
+            <div class="mb-3 flex flex-wrap items-center gap-3 text-xs lg:hidden" aria-label="Ordenação">
+                <span class="text-gray-500">Ordenar:</span>
+                <x-sortablelink column="last_contribution_date" title="Recentes" />
+                <x-sortablelink column="pending" title="Pendências" />
+                <x-sortablelink column="saldo_cents" title="Saldo" />
+                <details class="w-full text-xs text-gray-500">
+                    <summary class="cursor-pointer">Outras ordenações</summary>
+                    <div class="mt-2 flex flex-wrap gap-3">
+                        <x-sortablelink column="name" title="Cooperado" />
+                        <x-sortablelink column="direct_cents" title="Direta" />
+                        <x-sortablelink column="retained_cents" title="Retida" />
+                        <x-sortablelink column="devolvido_cents" title="Devoluções" />
+                    </div>
+                </details>
+            </div>
+
+            <div class="mb-4 rounded-lg border border-gray-200 bg-white">
+                <x-table aria-label="Posição do capital social por cooperado" style="width:100%;">
+                    <x-table.thead class="hidden lg:block">
                         <x-table.tr>
-                            <x-table.th class="w-2/12"><x-sortablelink column="name" title="Cooperado" /></x-table.th>
-                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="direct_cents" title="Integralização direta" /></x-table.th>
-                            <x-table.th kind="amount" class="w-2/12"><x-sortablelink column="retained_cents" title="Retenção na produção" /></x-table.th>
-                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="devolvido_cents" title="Devoluções" /></x-table.th>
-                            <x-table.th kind="amount" class="w-1/12"><x-sortablelink column="saldo_cents" title="Saldo" /></x-table.th>
-                            <x-table.th class="w-2/12"><x-sortablelink column="last_contribution_date" title="Última integralização" /></x-table.th>
-                            <x-table.th class="w-1/12" title="Pendências não confirmadas"><x-sortablelink column="pending" title="Pend." :arguments="['title' => 'Ordenar por pendências']" /></x-table.th>
-                            <x-table.th class="w-2/12" title="Situação">Situação</x-table.th>
+                            <x-table.th class="lg:w-3/12 min-w-0">
+                                <x-slot name="first">
+                                    <x-sortablelink column="name" title="Cooperado" />
+                                </x-slot>
+                                <x-slot name="second">
+                                    <x-sortablelink column="last_contribution_date" title="Última integralização" />
+                                </x-slot>
+                            </x-table.th>
+                            <x-table.th class="lg:w-3/12 min-w-0" kind="amount">
+                                <x-slot name="first">
+                                    <x-sortablelink column="direct_cents" title="Integralização direta" />
+                                </x-slot>
+                                <x-slot name="second">
+                                    <x-sortablelink column="retained_cents" title="Retenção na produção" />
+                                </x-slot>
+                            </x-table.th>
+                            <x-table.th class="lg:w-2/12 min-w-0" kind="amount">
+                                <x-slot name="first">
+                                    <x-sortablelink column="saldo_cents" title="Saldo" />
+                                </x-slot>
+                                <x-slot name="second">
+                                    <x-sortablelink column="devolvido_cents" title="Devoluções" />
+                                </x-slot>
+                            </x-table.th>
+                            <x-table.th class="lg:w-4/12 min-w-0">
+                                <x-slot name="first">
+                                    <x-sortablelink column="pending" title="Pendências" />
+                                </x-slot>
+                                <x-slot name="second">
+                                    Situação e ressalvas
+                                </x-slot>
+                            </x-table.th>
                         </x-table.tr>
                     </x-table.thead>
                     <x-table.tbody>
                         @forelse ($class->memberPages as $member)
-                            <x-table.tr>
-                                <x-table.td class="w-2/12">
-                                    <a href="{{ $class->reportUrl('ledger', $member['contact_id']) }}"
-                                       class="font-medium text-blue-600 hover:underline">{{ $member['name'] }}</a>
+                            <x-table.tr class="relative flex flex-wrap lg:flex-nowrap lg:items-center px-1 group border-b hover:bg-gray-100">
+                                <x-table.td override="class" class="w-7/12 lg:w-3/12 min-w-0 px-2 py-3 text-sm text-black">
+                                    <x-slot name="first" override="class" class="font-medium whitespace-normal break-words">
+                                        <span class="block text-xs font-normal text-gray-500 lg:hidden">Cooperado</span>
+                                        <a href="{{ $class->reportUrl('ledger', $member['contact_id']) }}"
+                                           class="text-blue-600 hover:underline">{{ $member['name'] }}</a>
+                                    </x-slot>
+                                    <x-slot name="second" override="class" class="mt-1 text-xs text-gray-500 whitespace-normal">
+                                        <span class="lg:hidden">Última integralização: </span>
+                                        {{ $member['last_contribution_date'] !== null
+                                            ? company_date($member['last_contribution_date']) : 'Sem integralização' }}
+                                    </x-slot>
                                 </x-table.td>
-                                <x-table.td kind="amount" class="w-1/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</x-table.td>
-                                <x-table.td kind="amount" class="w-2/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</x-table.td>
-                                <x-table.td kind="amount" class="w-1/12">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</x-table.td>
-                                <x-table.td kind="amount" class="w-1/12 font-semibold">R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</x-table.td>
-                                <x-table.td class="w-2/12 whitespace-nowrap">
-                                    {{ $member['last_contribution_date'] !== null
-                                        ? company_date($member['last_contribution_date']) : '—' }}
+                                <x-table.td override="class" class="w-5/12 lg:w-3/12 min-w-0 px-2 py-3 text-sm text-black">
+                                    <x-slot name="first" override="class" class="font-medium tabular-nums break-words">
+                                        <span class="mr-1 text-xs font-normal text-gray-500 lg:hidden">Direta:</span>
+                                        R$ {{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}
+                                    </x-slot>
+                                    <x-slot name="second" override="class" class="mt-1 text-xs text-gray-500 tabular-nums break-words">
+                                        <span class="lg:hidden">Retida: </span>
+                                        R$ {{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}
+                                    </x-slot>
                                 </x-table.td>
-                                <x-table.td class="w-1/12">
-                                    <span class="inline-flex items-center gap-1 whitespace-nowrap">
+                                <x-table.td override="class" class="w-5/12 lg:w-2/12 min-w-0 px-2 py-3 text-sm text-black">
+                                    <x-slot name="first" override="class" class="font-semibold tabular-nums break-words">
+                                        <span class="mr-1 text-xs font-normal text-gray-500 lg:hidden">Saldo:</span>
+                                        R$ {{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}
+                                    </x-slot>
+                                    <x-slot name="second" override="class" class="mt-1 text-xs text-gray-500 tabular-nums break-words">
+                                        <span class="lg:hidden">Devoluções: </span>
+                                        R$ {{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}
+                                    </x-slot>
+                                </x-table.td>
+                                <x-table.td override="class" class="w-7/12 lg:w-4/12 min-w-0 px-2 py-3 text-sm text-black">
+                                    <x-slot name="first" override="class" class="flex flex-wrap items-center gap-2">
                                         @if ($member['pending'] > 0)
-                                            <span class="inline-flex items-center justify-center rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700"
+                                            <span class="rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700"
                                                   title="{{ $member['pending'] }} {{ $member['pending'] === 1 ? 'movimentação não confirmada' : 'movimentações não confirmadas' }}"
-                                                  aria-label="{{ $member['pending'] }} {{ $member['pending'] === 1 ? 'pendência' : 'pendências' }}">{{ $member['pending'] }}</span>
-                                        @else
-                                            <span class="text-gray-400" title="Sem pendências" aria-label="Sem pendências">—</span>
-                                        @endif
-                                        @if ($member['warnings'] > 0)
-                                            <span class="inline-flex items-center gap-1 text-xs text-yellow-700"
-                                                  title="{{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva' : 'ressalvas' }} em valores já confirmados"
-                                                  aria-label="{{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva' : 'ressalvas' }}">
-                                                <span class="material-icons text-sm" aria-hidden="true">report_problem</span>{{ $member['warnings'] }}
+                                                  aria-label="{{ $member['pending'] }} {{ $member['pending'] === 1 ? 'pendência' : 'pendências' }}">
+                                                {{ $member['pending'] }} {{ $member['pending'] === 1 ? 'pendência' : 'pendências' }}
                                             </span>
                                         @endif
-                                    </span>
-                                </x-table.td>
-                                <x-table.td class="w-2/12">
-                                    @forelse ($member['status_labels'] as $label => $total)
-                                        <div class="text-xs leading-5 text-yellow-700">
-                                            <span>{{ $label }}</span>
-                                            @if ($total > 1)
-                                                <span class="font-semibold" aria-label="{{ $total }} ocorrências">×{{ $total }}</span>
-                                            @endif
-                                        </div>
-                                    @empty
-                                        <span class="text-xs text-gray-500">Sem ocorrências</span>
-                                    @endforelse
+                                        @if ($member['warnings'] > 0)
+                                            <span class="rounded-full bg-yellow-50 px-2 py-1 text-xs font-medium text-yellow-700"
+                                                  title="{{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva em movimentação confirmada' : 'ressalvas em movimentações confirmadas' }}">
+                                                {{ $member['warnings'] }} {{ $member['warnings'] === 1 ? 'ressalva' : 'ressalvas' }}
+                                            </span>
+                                        @endif
+                                        @if ($member['pending'] === 0 && $member['warnings'] === 0)
+                                            <span class="text-xs text-green-700">Sem pendências</span>
+                                        @endif
+                                    </x-slot>
+                                    <x-slot name="second" override="class" class="mt-1 whitespace-normal break-words">
+                                        @foreach ($member['status_labels'] as $label => $total)
+                                            <div class="text-xs leading-5 text-yellow-700" title="{{ $label }}">
+                                                {{ \Modules\AkauntingReports\Support\CapitalSocialReview::shortLabel($label) }}
+                                                @if ($total > 1)
+                                                    <span class="font-semibold" aria-label="{{ $total }} ocorrências">×{{ $total }}</span>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </x-slot>
                                 </x-table.td>
                             </x-table.tr>
                         @empty

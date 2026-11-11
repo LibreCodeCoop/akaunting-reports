@@ -44,6 +44,22 @@ final class CapitalSocialReview
         };
     }
 
+    /** Keep the full reason in the title and in exports; use compact labels in the table. */
+    public static function shortLabel(string $label): string
+    {
+        return match ($label) {
+            'Aguardando pagamento' => 'Pagamento pendente',
+            'Revisar vínculo documental' => 'Revisar vínculo',
+            'Confirmada com ressalva' => 'Confirmação com ressalva',
+            'Conversão de moeda pendente' => 'Converter moeda',
+            'Moeda ou valor a verificar' => 'Verificar moeda/valor',
+            'Classificação de capital indefinida' => 'Classificação indefinida',
+            'Tipo de documento não suportado' => 'Tipo não suportado',
+            'Itens de capital inconsistentes' => 'Itens inconsistentes',
+            default => $label,
+        };
+    }
+
     public static function guidance(array $row): string
     {
         if (($row['status'] ?? '') === 'confirmado') {

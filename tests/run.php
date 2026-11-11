@@ -99,22 +99,44 @@ check($byType['total_cents'] === 11500, 'Capital balance reconciles across movem
 check($byType['pending_count'] === 1 && $byType['confirmed_count'] === 3, 'Pending does not inflate balances'); ++$tests;
 check($byType['members_count'] === 1 && $byType['movement_count'] === 4, 'Dashboard counts are source-derived'); ++$tests;
 $nativeView = file_get_contents(__DIR__ . '/../Resources/views/reports/capital-social/content.blade.php');
-check(str_contains($nativeView, 'title="Pend."')
+check(str_contains($nativeView, 'column="pending" title="Pendências"')
     && str_contains($nativeView, 'aria-label="{{ $member[\'pending\'] }} {{ $member[\'pending\'] === 1 ? \'pendência\' : \'pendências\' }}"'),
-    'Compact pending indicator retains accessible numeric count'); ++$tests;
-check(str_contains($nativeView, 'style="min-width: 1520px;"')
-    && !str_contains($nativeView, ' pendente(s)</span>'),
-    'Pending column avoids long repeated text and cramped widths'); ++$tests;
-check(str_contains($nativeView, '<x-sortablelink column="last_contribution_date"')
-    && str_contains($nativeView, '<x-table.th class="w-2/12" title="Situação">'),
-    'Member summary must preserve a separate explanatory status column'); ++$tests;
+    'Combined issue column retains native sorting and accessible pending counts'); ++$tests;
+$beforeOverviewTable = explode('<x-table aria-label="Posição do capital social por cooperado"', $nativeView, 2)[0];
+check(!str_contains($nativeView, 'min-width: 1520px')
+    && !str_contains($beforeOverviewTable, 'overflow-x-auto'),
+    'Member overview must not require forced wide-table horizontal scrolling'); ++$tests;
+check(str_contains($nativeView, 'aria-label="Visões do relatório" class="mb-6 flex flex-wrap'),
+    'Report navigation must wrap instead of overflowing on narrow phones'); ++$tests;
 $overviewMarkup = explode('</x-table>', explode('<x-table aria-label="Posição do capital social por cooperado"', $nativeView, 2)[1], 2)[0];
-preg_match_all('/<x-table\\.th[^>]*class="w-(\\d+)\\/12"/', $overviewMarkup, $thWidths);
-preg_match_all('/<x-table\\.td[^>]*class="w-(\\d+)\\/12/', $overviewMarkup, $tdWidths);
-check(count($thWidths[1])===8 && array_sum(array_map('intval',$thWidths[1]))===12,
-    'Native table headings must fit a complete 12-column grid'); ++$tests;
-check(count($tdWidths[1])===8 && array_sum(array_map('intval',$tdWidths[1]))===12,
-    'Native table cells must align with the same 12-column grid'); ++$tests;
+preg_match_all('/<x-table\.th[^>]*class="[^"]*lg:w-(\d+)\/12/', $overviewMarkup, $thWidths);
+preg_match_all('/<x-table\.td[^>]*class="[^"]*lg:w-(\d+)\/12/', $overviewMarkup, $tdWidths);
+check(count($thWidths[1])===4 && array_sum(array_map('intval',$thWidths[1]))===12,
+    'Member overview uses four balanced native composite headers'); ++$tests;
+check(count($tdWidths[1])===4 && array_sum(array_map('intval',$tdWidths[1]))===12,
+    'Member rows use four aligned composite data cells'); ++$tests;
+check(substr_count($overviewMarkup, '<x-slot name="first"')>=6
+    && substr_count($overviewMarkup, '<x-slot name="second"')>=6,
+    'Native table components use stacked first and second information'); ++$tests;
+check(str_contains($overviewMarkup, 'flex-wrap lg:flex-nowrap')
+    && str_contains($overviewMarkup, 'lg:hidden'),
+    'Native table must reflow data to stacked mobile rows'); ++$tests;
+check(str_contains($overviewMarkup, "CapitalSocialReview::shortLabel")
+    && !str_contains($overviewMarkup,'title="Situação">Situação</x-table.th>'),
+    'Pending counters and concise explanations belong in a single cell'); ++$tests;
+check(str_contains($nativeView, '<details class="w-full text-xs text-gray-500">')
+    && str_contains($nativeView, 'Outras ordenações')
+    && str_contains($nativeView, 'column="devolvido_cents" title="Devoluções"'),
+    'Small screens retain all original native sortable fields without crowding the toolbar'); ++$tests;
+
+check(CapitalSocialReview::shortLabel('Aguardando pagamento') === 'Pagamento pendente',
+    'Unpaid movement has a concise but understandable table label'); ++$tests;
+check(CapitalSocialReview::shortLabel('Revisar vínculo documental') === 'Revisar vínculo',
+    'Document-link problem has an abbreviated visible reason'); ++$tests;
+check(CapitalSocialReview::shortLabel('Confirmada com ressalva') === 'Confirmação com ressalva',
+    'Confirmed audit reservation remains distinct from pending'); ++$tests;
+check(CapitalSocialReview::shortLabel('Saldo negativo') === 'Saldo negativo',
+    'Unmapped audit issues retain complete meaning'); ++$tests;
 $reportSource = file_get_contents(__DIR__ . '/../Reports/CapitalSocial.php');
 check(str_contains($reportSource, "parent::setViews()")
     && !str_contains($reportSource, "views['show'] ="),

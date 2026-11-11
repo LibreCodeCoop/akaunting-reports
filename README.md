@@ -17,10 +17,16 @@ The tables use Akaunting's built-in `x-table` and `x-sortablelink` components,
 with whitelisted, numeric-aware sorting applied to the complete dataset
 **before** pagination. The member view defaults to **latest confirmed integralization first**, including
 retentions on settled production documents. Members without confirmed capital
-contributions appear last. A dedicated **Situação** column explains the actual
-pending or confirmed-with-reservation classifications, grouped by kind and count;
-compact numeric badges remain in the adjacent pending column. Column sorting
-remains available for pending counts, balances, and all supported fields. The report bar (`report-filter`) is the native Akaunting
+contributions appear last. The member view uses the same two-level
+first/second field pattern as Akaunting's invoice list, consolidating eight
+fields into four native table columns: member/recent contribution,
+direct/retained capital, balance/refunds, and pending counts/reasons.
+Pending and audit reservations are distinguished within the same cell.
+On narrow screens the rows wrap into two compact pairs rather than requiring
+a wide table and an invisible horizontal scrollbar. Full reasons remain
+available from the source ledger and CSV, while shortened labels make the
+overview readable. Column sorting remains available for the original
+financial fields, pending counts, and contribution dates. The report bar (`report-filter`) is the native Akaunting
 report filtering system; it differs from the transaction/item index search bar.
 It offers company-specific member selection, as-of date, overview pending-members
 filter, and ledger confirmation, nature and reason filters.

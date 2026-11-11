@@ -71,10 +71,12 @@ unconfirmed movements agrees with the detailed ledger.
 The member overview defaults to **latest confirmed positive integralization
 date descending**, placing members without confirmed integralizations last.
 Native sortable links allow the user to select other columns, including pending
-count. The narrow pending-count column remains compact, while a separate Situação
-column displays grouped, localized reasons such as awaiting payment, inconsistent
-document link, or confirmed with a reservation. Both are computed from the same
-read-only ledger data; status descriptions are included in CSV and printed views.
+count. The compact member view uses four native two-line columns, like the native
+invoice list: member/date, direct/retained contribution, balance/refunds,
+and the combined pending/warning/reason cell. Long detailed reason strings are
+available in tooltips and the individual ledger; the overview uses short labels.
+The same underlying read-only data remains in CSV and printed views.
+Mobile rows wrap into two pairs, avoiding a forced 1520-pixel table width.
 
 ## Historical activity, membership and account security
 
@@ -90,3 +92,8 @@ Contacts with matching e-mail but no verified link must remain unlinked. Never
 provision new accounts, re-enable existing accounts or assign financial
 permissions based on presence in this report; a separate member-only portal
 must enforce authenticated own-contact scoping.
+
+The shipped Akaunting stylesheet compiles lg: responsive classes used by the
+member table, but not the corresponding md: width classes. The compact
+mobile sorting bar exposes recency, pending count and balance, with the other
+native sort links available under a collapsible section.
