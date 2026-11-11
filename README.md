@@ -29,7 +29,7 @@ The calculation uses a configurable capital category, capital document item, and
    php artisan akaunting-reports:install-capital --company=COMPANY_ID --category=CATEGORY_ID --item=ITEM_ID --dry-run
    ```
 
-5. **Only after reconciled approval**, run the same command without `--dry-run` to provision that company's settings and report row. Optionally supply `--refund-code=...`, `--advance-category=...`, `--advance-item=...`, `--legacy-refund-category=...`, `--late-deduction-item=...`, using values verified in the same company. Historical aliases are opt-in and must not be inferred from another installation. No financial documents or transactions are changed.
+5. **Only after reconciled approval**, run the same command without `--dry-run` to provision that company's settings and report row. Optionally supply `--refund-code=...`, `--advance-category=...`, `--advance-item=...`, `--legacy-refund-category=...`, `--late-deduction-item=..., `--excluded-expense-category=...``, using values verified in the same company. Historical aliases are opt-in and must not be inferred from another installation. No financial documents or transactions are changed.
 6. Grant the required *read-akaunting-reports-reports-capital-social* permission only to authorized report viewers. Locate the report in the native **Reports** section.
 
 Never test with credentials, copied personal records or dumps in this repository. Read [Reconciliation and release gate](docs/reconciliation.md) before any deployment. A syntactically correct or green CI run is not a substitute for reconciliation of real business records.

@@ -19,6 +19,7 @@ final readonly class CapitalSocialPolicy
         public ?int $advanceItemId = null,
         public ?int $legacyRefundCategoryId = null,
         public ?int $lateDeductionItemId = null,
+        public ?int $excludedExpenseCategoryId = null,
     ) {
         if ($companyId <= 0 || $categoryId <= 0 || $itemId <= 0) {
             throw new InvalidArgumentException('Company, category and item identifiers must be positive.');
@@ -26,7 +27,7 @@ final readonly class CapitalSocialPolicy
         if (!preg_match('/^[a-z][a-z0-9-]{0,62}$/D', $refundCategoryCode)) {
             throw new InvalidArgumentException('Invalid refund category code.');
         }
-        foreach ([$advanceCategoryId, $advanceItemId, $legacyRefundCategoryId, $lateDeductionItemId] as $id) {
+        foreach ([$advanceCategoryId, $advanceItemId, $legacyRefundCategoryId, $lateDeductionItemId, $excludedExpenseCategoryId] as $id) {
             if ($id !== null && $id <= 0) {
                 throw new InvalidArgumentException('Optional item and category identifiers must be positive.');
             }

@@ -71,4 +71,10 @@ try {
     new CapitalSocialPolicy(companyId: 1, categoryId: 4, itemId: 8, legacyRefundCategoryId: -1);
     throw new RuntimeException('Negative legacy refund category was accepted');
 } catch (InvalidArgumentException) { ++$tests; }
+check(CapitalSocialRules::transaction([...$entry, 'document_id' => 61], $policy)['kind'] === 'revisao', 'Linked unrelated document must be reviewed'); ++$tests;
+check(CapitalSocialRules::transaction([...$entry, 'document_id' => null], $policy)['amount_cents'] === 12345, 'Unlinked capital transaction remains confirmed'); ++$tests;
+try {
+    new CapitalSocialPolicy(companyId: 1, categoryId: 4, itemId: 8, excludedExpenseCategoryId: -2);
+    throw new RuntimeException('Invalid external-capital category was accepted');
+} catch (InvalidArgumentException) { ++$tests; }
 echo "$tests business invariants passed\n";

@@ -34,19 +34,34 @@ final class CapitalSocialLedger
                 $join->on('cat.id', '=', 't.category_id')->on('cat.company_id', '=', 't.company_id');
             })
             ->where('t.company_id', $policy->companyId)
-            ->whereNull('t.deleted_at')->whereNull('t.document_id')
+            ->whereNull('t.deleted_at')
             ->whereNotNull('t.contact_id')
+            ->where(static function ($query) use ($policy): void {
+                $query->whereNull('t.document_id')
+                    ->orWhereNotExists(static function ($linked) use ($policy): void {
+                        $linked->selectRaw('1')->from('documents as linked_doc')
+                            ->whereColumn('linked_doc.id', 't.document_id')
+                            ->whereColumn('linked_doc.company_id', 't.company_id')
+                            ->whereNull('linked_doc.deleted_at')
+                            ->where(static function ($classified) use ($policy): void {
+                                $classified->where('linked_doc.category_id', $policy->categoryId)
+                                    ->orWhereExists(static function ($items) use ($policy): void {
+                                        $items->selectRaw('1')->from('document_items as linked_item')
+                                            ->whereColumn('linked_item.document_id', 'linked_doc.id')
+                                            ->where('linked_item.item_id', $policy->itemId)
+                                            ->whereNull('linked_item.deleted_at');
+                                    });
+                            });
+                    });
+            })
             ->where(static function ($query) use ($policy): void {
                 $query->where('t.category_id', $policy->categoryId)
                     ->orWhere('cat.code', $policy->refundCategoryCode)
                     ->orWhereRaw('LOWER(t.description) LIKE ?', ['%capital social%'])
                     ->orWhereRaw("REPLACE(LOWER(t.description), ' ', '') LIKE ?", ['%capitalsocial%']);
-                if ($policy->legacyRefundCategoryId !== null) {
-                    $query->orWhere('t.category_id', $policy->legacyRefundCategoryId);
-                }
             })
             ->select('t.id','t.contact_id','c.name','c.tax_number','t.amount','t.description',
-                't.currency_code','t.paid_at','t.type','t.category_id','cat.code as category_code');
+                't.document_id','t.currency_code','t.paid_at','t.type','t.category_id','cat.code as category_code');
         if ($asOf !== null) {
             $transactions->where('t.paid_at', '<=', $asOf . ' 23:59:59');
         }
@@ -118,6 +133,19 @@ final class CapitalSocialLedger
 
         $rows = [];
         foreach ($entries as $entry) {
+            // A refund received from another entity cannot be integralization of member capital.
+            $description = mb_strtolower((string) ($entry->description ?? ''), 'UTF-8');
+            $looksLikeReturn = (bool) preg_match('/devolu|restitui|estorn|pag[oa] a maior/u', $description);
+            if ((string) $entry->type === 'income' && $looksLikeReturn) {
+                continue;
+            }
+            // Investments held in another cooperative belong to a distinct ledger.
+            // The company-specific category is opt-in; never embed customer category IDs.
+            if ((string) $entry->type === 'expense'
+                && $policy->excludedExpenseCategoryId !== null
+                && (int) $entry->category_id === $policy->excludedExpenseCategoryId) {
+                continue;
+            }
             $key = self::identityKey((string) $entry->tax_number, (int) $entry->contact_id);
             $evaluated = CapitalSocialRules::transaction((array) $entry, $policy);
             $rows[] = self::movement('transaction', (int) $entry->id, $identities[$key], $key,

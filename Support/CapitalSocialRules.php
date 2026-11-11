@@ -20,6 +20,9 @@ final class CapitalSocialRules
             && (bool) preg_match('/devolu[\x{00E7}c][\x{00E3}a]o\s*de\s*capital\s*social/ui', $description);
         $looksLikeRefund = (bool) preg_match('/devolu|restitui|estorn|pag[oa] a maior/ui', $description);
 
+        if (($record['document_id'] ?? null) !== null) {
+            return self::review('Capital-related transaction references a non-capital document.');
+        }
         if ((string) $record['currency_code'] !== 'BRL' || $amount <= 0) {
             return self::review('Currency or amount needs verification.');
         }

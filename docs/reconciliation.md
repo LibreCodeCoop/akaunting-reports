@@ -41,3 +41,9 @@ negative line was added after the last payment and its amount matches the discre
 Keep such cases as confirmed *with an audit warning*. Missing evidence remains pending; do not
 silently count the amount. Validate these cases against the existing cooperative-production
 ledger before enabling the module.
+
+The external investment expense category is another optional company-specific ID.
+Entries from investments **owned by** the company in other cooperatives are not
+member shares **held in** the company and must not be mixed into this ledger.
+When a transaction references an unrelated document, keep it as a pending
+candidate; matching capital invoices must remain deduplicated.
