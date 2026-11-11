@@ -461,6 +461,34 @@ $frraEmpty=\Modules\AkauntingReports\Support\FrraAnnualMatrix::build([],2024);
 check($frraEmpty['members_count'] === 0 && $frraEmpty['total_cents'] === 0
     && count($frraEmpty['months'])===12,
     'FRRA empty year remains a full zeroed twelve-month report'); ++$tests;
+
+$frraOptions = \Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraEntries, 2026);
+check(count($frraOptions) === 2 && $frraOptions[101] === 'Cooperada Alfa'
+    && $frraOptions[202] === 'Cooperado Beta',
+    'Native FRRA member choices match only year-specific financial source contacts'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraEntries, 2025)
+    === [202 => 'Cooperado Beta'],
+    'Member selector must honor selected competence year'); ++$tests;
+check(\Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraEntries, 2024) === [],
+    'Year without FRRA has no unrelated vendor choices'); ++$tests;
+$frraOutsider = [...$frraEntries, [
+    'contact_id' => 303, 'name' => 'Estabelecimento fictício',
+    'source' => 'unrelated_vendor', 'competence' => '2026-07',
+    'amount_cents' => 50000, 'status' => 'paid',
+]];
+check(!array_key_exists(303, \Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraOutsider, 2026)),
+    'Unrelated vendor must never be offered as FRRA member'); ++$tests;
+$frraNames = [...$frraEntries, [
+    'contact_id' => 303, 'name' => 'Cooperada Alfa',
+    'source' => 'production', 'competence' => '2026-07',
+    'amount_cents' => 1000, 'status' => 'paid',
+]];
+$disambiguated = \Modules\AkauntingReports\Support\FrraAnnualMatrix::memberOptions($frraNames, 2026);
+check(count($disambiguated) === 3
+    && $disambiguated[101] === 'Cooperada Alfa (cadastro #101)'
+    && $disambiguated[303] === 'Cooperada Alfa (cadastro #303)'
+    && count(array_unique(array_values($disambiguated))) === 3,
+    'Distinct accounting contacts with same name must have unique labels, not be silently merged'); ++$tests;
 $reportManifest = json_decode(file_get_contents(__DIR__ . '/../module.json'), true, 512, JSON_THROW_ON_ERROR);
 check(in_array('Modules\\AkauntingReports\\Reports\\CapitalSocial', $reportManifest['reports'], true)
     && in_array('Modules\\AkauntingReports\\Reports\\FrraAnnual', $reportManifest['reports'], true),
@@ -476,8 +504,12 @@ check(str_contains($frraView,'Total anual')
 $frraSource=file_get_contents(__DIR__ . '/../Reports/FrraAnnual.php');
 check(str_contains($frraSource, 'StreamedResponse')
     && str_contains($frraSource, "'Content-Type' => 'text/csv; charset=UTF-8'")
-    && str_contains($frraSource, "->where('type', 'vendor')"),
-    'FRRA native report supports CSV and company member filters'); ++$tests;
+    && str_contains($frraSource, "FrraAnnualMatrix::memberOptions(")
+    && !str_contains($frraSource, "->where('type', 'vendor')"),
+    'FRRA native report supports CSV and only audited FRRA members, never the full vendors directory'); ++$tests;
+check(str_contains($frraSource, 'private ?array $sourceLedger = null;')
+    && str_contains($frraSource, 'return $this->sourceLedger = FrraAnnualLedger::read($company, $policy);'),
+    'FRRA filter and financial matrix reuse one company-scoped ledger'); ++$tests;
 $frraLedgerSource=file_get_contents(__DIR__ . '/../Support/FrraAnnualLedger.php');
 check(str_contains($frraLedgerSource, '->where(\'d.company_id\', $companyId)')
     && str_contains($frraLedgerSource, "->whereNull('d.deleted_at')")

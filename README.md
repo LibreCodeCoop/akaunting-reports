@@ -10,7 +10,13 @@ Independent, reusable [Akaunting](https://akaunting.com/) Laravel module for add
 The **FRRA Anual** report adds an independent read-only annual matrix:
 one row per cooperative member, twelve months grouped in four compact quarter
 columns, an annual total for each member, and monthly/yearly totals in a final
-row. The native filter switches years and optionally selects a member.
+row. The native filter switches years and optionally selects a member. Its
+member options come from the same company-scoped, year-specific FRRA ledger
+as the totals: unrelated suppliers and repeated vendor contact names are
+never offered. A cooperative's historical FRRA is retained even if their
+Akaunting login is disabled or their HR employee record is absent. Different
+financial contact IDs sharing a name are explicitly disambiguated rather
+than silently merged.
 The responsive layout avoids hidden horizontal scrolling. Native print/PDF
 and CSV contain the complete list, not a page.
 

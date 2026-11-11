@@ -127,6 +127,40 @@ final class FrraAnnualMatrix
         ];
     }
 
+    /**
+     * Members for the native year filter, derived from the same audited ledger
+     * and competence rules used by the report totals. A login or HR record is
+     * not required: historical FRRA must remain accessible after departure.
+     *
+     * @param list<array<string,mixed>> $entries
+     * @return array<int,string>
+     */
+    public static function memberOptions(array $entries, int $year): array
+    {
+        $members = self::build($entries, $year)['members'];
+
+        $labelCounts = [];
+        foreach ($members as $member) {
+            $label = trim((string) $member['name']);
+            $label = $label !== '' ? $label : 'Contato sem nome';
+            $labelCounts[mb_strtolower($label)] = ($labelCounts[mb_strtolower($label)] ?? 0) + 1;
+        }
+
+        $options = [];
+        foreach ($members as $member) {
+            $id = (int) $member['contact_id'];
+            $label = trim((string) $member['name']);
+            $label = $label !== '' ? $label : 'Contato sem nome';
+            // Different contacts with the same name are not silently merged.
+            if ($labelCounts[mb_strtolower($label)] > 1) {
+                $label .= ' (cadastro #' . $id . ')';
+            }
+            $options[$id] = $label;
+        }
+
+        return $options;
+    }
+
     /** @param list<array<string,mixed>> $rows */
     private static function sumCents(array $rows): int
     {

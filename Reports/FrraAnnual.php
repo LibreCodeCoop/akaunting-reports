@@ -31,6 +31,8 @@ final class FrraAnnual extends Report
     /** @var array<string,mixed> */
     public array $issues = [];
     public ?string $configurationError = null;
+    /** @var array<string,mixed>|null */
+    private ?array $sourceLedger = null;
     /** @var array<int,string> */
     public array $monthNames = [
         1 => 'Jan', 2 => 'Fev', 3 => 'Mar', 4 => 'Abr',
@@ -78,9 +80,11 @@ final class FrraAnnual extends Report
         $this->filters['operators']['year'] = [
             'equal' => true, 'not_equal' => false, 'multiple' => false, 'range' => false,
         ];
-        $this->filters['member'] = DB::table('contacts')->where('company_id', (int) company_id())
-            ->where('type', 'vendor')->whereNull('deleted_at')
-            ->orderBy('name')->pluck('name', 'id')->toArray();
+        // The native member selector must match the actual FRRA report sources,
+        // not Akaunting's entire vendors directory (which also has duplicates).
+        $ledger = $this->readSources((int) company_id());
+        $this->filters['member'] = $ledger === null ? []
+            : FrraAnnualMatrix::memberOptions($ledger['entries'], $this->requestedYear());
         $this->filters['keys']['member'] = 'member';
         $this->filters['names']['member'] = 'Cooperado';
         $this->filters['operators']['member'] = [
@@ -98,6 +102,38 @@ final class FrraAnnual extends Report
         $rawMember = $this->getSearchStringValue('member');
         $this->selectedMember = is_string($rawMember) && ctype_digit($rawMember)
             && (int) $rawMember > 0 ? (int) $rawMember : null;
+
+        $ledger = $this->readSources($company);
+        if ($ledger === null) {
+            $this->configurationError = 'Configure as origens de FRRA desta empresa antes de utilizar o relatório.';
+            $this->summary = FrraAnnualMatrix::build([], $this->selectedYear);
+            return;
+        }
+        $entries = $ledger['entries'];
+        if ($this->selectedMember !== null) {
+            $entries = array_values(array_filter(
+                $entries, fn (array $row): bool => $row['contact_id'] === $this->selectedMember
+            ));
+        }
+        $this->summary = FrraAnnualMatrix::build($entries, $this->selectedYear);
+        $this->issues = array_diff_key($ledger, ['entries' => true]);
+    }
+
+    /**
+     * Share the same company-scoped source between the native filter and the
+     * financial matrix within one report request. Avoids divergent queries
+     * and double-loading the full document ledger.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function readSources(int $company): ?array
+    {
+        if ($company <= 0) {
+            return null;
+        }
+        if ($this->sourceLedger !== null) {
+            return $this->sourceLedger;
+        }
 
         $settings = DB::table('settings')->where('company_id', $company)
             ->whereIn('key', [
@@ -119,20 +155,10 @@ final class FrraAnnual extends Report
         if ($policy['production_category_id'] <= 0 || $policy['annual_category_id'] <= 0
             || $policy['production_prefix'] === '' || $policy['annual_prefix'] === ''
             || $policy['item_name'] === '') {
-            $this->configurationError = 'Configure as origens de FRRA desta empresa antes de utilizar o relatório.';
-            $this->summary = FrraAnnualMatrix::build([], $this->selectedYear);
-            return;
+            return null;
         }
 
-        $ledger = FrraAnnualLedger::read($company, $policy);
-        $entries = $ledger['entries'];
-        if ($this->selectedMember !== null) {
-            $entries = array_values(array_filter(
-                $entries, fn (array $row): bool => $row['contact_id'] === $this->selectedMember
-            ));
-        }
-        $this->summary = FrraAnnualMatrix::build($entries, $this->selectedYear);
-        $this->issues = array_diff_key($ledger, ['entries' => true]);
+        return $this->sourceLedger = FrraAnnualLedger::read($company, $policy);
     }
 
     public function export(): StreamedResponse

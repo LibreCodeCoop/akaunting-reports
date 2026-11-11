@@ -16,6 +16,9 @@ are not necessarily paid. FRRA is distinct from statutory cooperative funds.
    Referente ao ano/mês: YYYY-MM. Issue/payment dates are not a substitute.
 3. Production items have priority. Annual FRRA bills fill only member/month
    combinations absent from production, never the same retention twice.
+   The member filter is derived from these verified sources for the selected
+   year, never from the entire vendors list or from login/HR availability.
+   Financial reporting is not a legal membership register.
 4. Warn when sources overlap and their amounts disagree. Distinct production
    documents may represent legitimate multiple payments in one competence.
 5. Multiple-competence historic items remain unallocated, not guessed or split
