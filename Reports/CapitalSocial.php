@@ -77,10 +77,8 @@ final class CapitalSocial extends Report
         // The stock report editor persists these as per-report settings.
         // Sorting preferences apply to the member summary; ledger chronology
         // retains the native date sorting.
-        [$defaultColumn, $defaultDirection] = CapitalSocialSorter::overviewDefaults(
-            $this->model->settings->default_sort ?? null,
-            $this->model->settings->default_direction ?? null
-        );
+        [$primary, $secondary, $tertiary] = $this->memberSortPreferences();
+        [$defaultColumn, $defaultDirection] = $primary;
 
         return [
             [
@@ -109,6 +107,57 @@ final class CapitalSocial extends Report
                 'selected' => $defaultDirection,
                 'attributes' => [],
             ],
+            [
+                'type' => 'select',
+                'name' => 'secondary_sort',
+                'title' => 'Ordenação secundária (desempate)',
+                'values' => CapitalSocialSorter::overviewOptions(),
+                'selected' => $secondary[0],
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'secondary_direction',
+                'title' => 'Direção da ordenação secundária',
+                'values' => ['desc' => 'Decrescente', 'asc' => 'Crescente'],
+                'selected' => $secondary[1],
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'tertiary_sort',
+                'title' => 'Ordenação terciária (último desempate)',
+                'values' => CapitalSocialSorter::overviewOptions(),
+                'selected' => $tertiary[0],
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'tertiary_direction',
+                'title' => 'Direção da ordenação terciária',
+                'values' => ['desc' => 'Decrescente', 'asc' => 'Crescente'],
+                'selected' => $tertiary[1],
+                'attributes' => [],
+            ],
+        ];
+    }
+
+    /** @return array{array{string,string},array{string,string},array{string,string}} */
+    private function memberSortPreferences(): array
+    {
+        return [
+            CapitalSocialSorter::overviewDefaults(
+                $this->model->settings->default_sort ?? null,
+                $this->model->settings->default_direction ?? null
+            ),
+            CapitalSocialSorter::overviewSecondaryDefaults(
+                $this->model->settings->secondary_sort ?? null,
+                $this->model->settings->secondary_direction ?? null
+            ),
+            CapitalSocialSorter::overviewTertiaryDefaults(
+                $this->model->settings->tertiary_sort ?? null,
+                $this->model->settings->tertiary_direction ?? null
+            ),
         ];
     }
 
@@ -371,18 +420,20 @@ final class CapitalSocial extends Report
                 $this->capitalSummary = CapitalSocialSummary::calculate($selectedMovements);
                 $this->reviewCounts = CapitalSocialReview::counts($selectedMovements);
             }
-            [$defaultColumn, $defaultDirection] = CapitalSocialSorter::overviewDefaults(
-                $this->model->settings->default_sort ?? null,
-                $this->model->settings->default_direction ?? null
-            );
-            // Set the visible native sort arrow without overriding a click
-            // on any other sortable column.
+            [$primary, $secondary, $tertiary] = $this->memberSortPreferences();
+            [$defaultColumn, $defaultDirection] = $primary;
+            // The native header determines only the first sorting criterion.
+            // The saved second and third criteria always break ties.
             if (!request()->has('sort')) {
                 request()->merge(['sort' => $defaultColumn, 'direction' => $defaultDirection]);
             }
             $this->sortedMembers = CapitalSocialSorter::sort(
                 $members, 'overview', request()->query('sort'), request()->query('direction'),
-                $defaultColumn, $defaultDirection
+                $defaultColumn, $defaultDirection,
+                [
+                    ['column' => $secondary[0], 'direction' => $secondary[1]],
+                    ['column' => $tertiary[0], 'direction' => $tertiary[1]],
+                ]
             );
             $this->memberPages = $this->paginate($this->sortedMembers, 15);
         }

@@ -192,6 +192,85 @@ $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'pending', '
 check(array_column($ordered,'contact_id') === [1,3,2], 'Pending count uses numeric sorting'); ++$tests;
 $ordered = CapitalSocialSorter::sort($syntheticMembers, 'overview', 'unknown;DROP TABLE', 'asc');
 check($ordered[0]['contact_id'] === 1, 'Untrusted sort key falls back to default pending ordering'); ++$tests;
+$tiedPending = [
+    ['contact_id'=>101, 'name'=>'Alpha older', 'pending'=>2,
+        'last_contribution_date'=>'2026-02-01', 'saldo_cents'=>25000],
+    ['contact_id'=>102, 'name'=>'Zulu recent', 'pending'=>2,
+        'last_contribution_date'=>'2026-11-09', 'saldo_cents'=>20000],
+    ['contact_id'=>103, 'name'=>'Beta older', 'pending'=>0,
+        'last_contribution_date'=>'2025-12-01', 'saldo_cents'=>10000],
+    ['contact_id'=>104, 'name'=>'Yankee recent', 'pending'=>0,
+        'last_contribution_date'=>'2026-11-08', 'saldo_cents'=>30000],
+    ['contact_id'=>105, 'name'=>'Missing activity', 'pending'=>0,
+        'last_contribution_date'=>null, 'saldo_cents'=>10000],
+];
+$compoundDefault = CapitalSocialSorter::sort($tiedPending, 'overview', null, null);
+check(array_column($compoundDefault, 'contact_id') === [102,101,104,103,105],
+    'Compound default: pending groups sort by most recent confirmed contribution'); ++$tests;
+check(CapitalSocialSorter::overviewSecondaryDefaults(null, null)
+    === ['last_contribution_date', 'desc'], 'Default secondary preference prioritizes recency'); ++$tests;
+check(CapitalSocialSorter::overviewTertiaryDefaults(null, null)
+    === ['name', 'asc'], 'Default third preference is alphabetic only after recency'); ++$tests;
+check(CapitalSocialSorter::overviewSecondaryDefaults('invalid','up')
+    === ['last_contribution_date','desc'], 'Invalid second settings fall back to recent first'); ++$tests;
+check(CapitalSocialSorter::overviewTertiaryDefaults(['name'],'down')
+    === ['name','asc'], 'Malformed third settings cannot bypass the allowed list'); ++$tests;
+$customTieBreakers = [
+    ['column'=>'name','direction'=>'asc'],
+    ['column'=>'last_contribution_date','direction'=>'desc'],
+];
+$customNames = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', null, null, 'pending', 'desc', $customTieBreakers
+);
+check(array_column($customNames,'contact_id') === [101,102,103,105,104],
+    'Saved secondary and tertiary sort columns apply in configured sequence'); ++$tests;
+$secondaryBalance = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', null, null, 'pending', 'desc',
+    [['column'=>'saldo_cents','direction'=>'desc'], ['column'=>'name','direction'=>'asc']]
+);
+check(array_column($secondaryBalance,'contact_id') === [101,102,104,103,105],
+    'Saved secondary balance sorting changes tie order without changing pending groups'); ++$tests;
+$manualAscendingPending = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', 'pending', 'asc', 'name', 'asc'
+);
+check(array_column($manualAscendingPending,'contact_id') === [104,103,105,102,101],
+    'Manual primary ascending sort keeps configured recency for both pending groups'); ++$tests;
+$manualBalanceOrder = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', 'saldo_cents', 'desc', 'pending', 'desc'
+);
+check(array_column($manualBalanceOrder,'contact_id') === [104,101,102,103,105],
+    'Manual primary balance sort preserves the secondary recency tie-break'); ++$tests;
+$duplicateCriteria = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', null, null, 'pending', 'desc',
+    [['column'=>'pending','direction'=>'asc'], ['column'=>'name','direction'=>'asc']]
+);
+check(array_column($duplicateCriteria,'contact_id') === [101,102,103,105,104],
+    'Duplicate secondary columns are skipped without reversing the primary order'); ++$tests;
+$ascendingRecency = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', 'last_contribution_date', 'asc'
+);
+check(array_column($ascendingRecency,'contact_id') === [103,101,104,102,105],
+    'Missing integralizations remain last even when date sort is ascending'); ++$tests;
+$invalidSavedOrder = CapitalSocialSorter::sort(
+    $tiedPending, 'overview', 'hijack', 'asc', 'pending', 'desc',
+    [['column'=>'drop_table','direction'=>'up'], ['column'=>['name'],'direction'=>'desc']]
+);
+check(array_column($invalidSavedOrder,'contact_id') === [102,101,104,103,105],
+    'Invalid URL and additional preferences fall back to the complete safe three-level order'); ++$tests;
+$identicalDate = [
+    ['contact_id'=>5,'name'=>'Zulu', 'pending'=>0,'last_contribution_date'=>'2026-11-11'],
+    ['contact_id'=>2,'name'=>'Alpha','pending'=>0,'last_contribution_date'=>'2026-11-11'],
+    ['contact_id'=>1,'name'=>'Alpha','pending'=>0,'last_contribution_date'=>'2026-11-11'],
+];
+$identicalDefault = CapitalSocialSorter::sort($identicalDate, 'overview', null, null);
+check(array_column($identicalDefault, 'contact_id') === [1,2,5],
+    'Third default sorts equal-date records by name then a deterministic contact ID'); ++$tests;
+$descendingThird = CapitalSocialSorter::sort(
+    $identicalDate, 'overview', null, null, 'pending', 'desc',
+    [['column'=>'last_contribution_date','direction'=>'desc'], ['column'=>'name','direction'=>'desc']]
+);
+check(array_column($descendingThird,'contact_id') === [5,1,2],
+    'Third criterion direction is independently configurable'); ++$tests;
 $ledgerRows = [
     ['id'=>3,'date'=>'2026-01-03','name'=>'A','source'=>'document','kind'=>'revisao','status'=>'revisar','amount_cents'=>0,'candidate_cents'=>5000,'running_balance_cents'=>1000],
     ['id'=>1,'date'=>'2026-01-01','name'=>'B','source'=>'transaction','kind'=>'integralizacao','status'=>'confirmado','amount_cents'=>1500,'candidate_cents'=>1500,'running_balance_cents'=>1500],
@@ -262,8 +341,12 @@ check($recentSorted[0]['contact_id']===101,'Native last-contribution order prior
 check(str_contains($reportSource, "'attributes' => []"),
     'Native report field must supply an attributes array to the edit template'); ++$tests;
 check(str_contains($reportSource, "'name' => 'default_sort'")
-    && str_contains($reportSource, "'name' => 'default_direction'"),
-    'Native Akaunting edit form exposes a sortable column and direction preference'); ++$tests;
+    && str_contains($reportSource, "'name' => 'default_direction'")
+    && str_contains($reportSource, "'name' => 'secondary_sort'")
+    && str_contains($reportSource, "'name' => 'secondary_direction'")
+    && str_contains($reportSource, "'name' => 'tertiary_sort'")
+    && str_contains($reportSource, "'name' => 'tertiary_direction'"),
+    'Native Akaunting editor exposes three configured sorting stages'); ++$tests;
 check(str_contains($reportSource, "model->settings->view"),
     'Editing the saved view changes the default report presentation'); ++$tests;
 check(str_contains($reportSource, "'any' => 'Qualquer pendência ou ressalva'"),
