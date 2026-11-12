@@ -15,13 +15,17 @@ use UnexpectedValueException;
  */
 final class DocumentSettlementRule implements Rule
 {
+    #[\Override]
     public function id(): string { return 'document_settlement'; }
 
+    #[\Override]
     public function version(): int { return 1; }
 
+    #[\Override]
     public function sources(): array { return ['documents', 'transactions']; }
 
     /** @return list<Occurrence> */
+    #[\Override]
     public function inspect(Snapshot $snapshot): array
     {
         $byDocument = [];
