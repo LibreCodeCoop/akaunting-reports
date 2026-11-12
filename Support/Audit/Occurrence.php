@@ -61,8 +61,6 @@ final readonly class Occurrence
                 throw new InvalidArgumentException('Audit evidence must be non-identifying machine data.');
             }
         }
-        ksort($evidence, SORT_STRING);
-        $this->evidence = $evidence;
         $this->id = hash('sha256', json_encode(
             [$companyId, $ruleId, $ruleVersion, $source, $sourceId, $caseKey],
             JSON_THROW_ON_ERROR
