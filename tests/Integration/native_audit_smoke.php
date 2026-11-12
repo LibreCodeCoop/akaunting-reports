@@ -123,6 +123,9 @@ requireCondition(count($company1Rows) >= 3, 'Synthetic documents not fetched.');
 $ledger = static fn (): string => hash('sha256', json_encode([
     DB::table('documents')->orderBy('id')->get()->toArray(),
     DB::table('transactions')->orderBy('id')->get()->toArray(),
+    ...(getenv('AUDIT_FULL_STACK') === 'yes' ? [
+        DB::table('nfse_receipts')->orderBy('id')->get()->toArray(),
+    ] : []),
 ], JSON_THROW_ON_ERROR));
 $before = $ledger();
 
@@ -142,6 +145,27 @@ requireCondition(in_array('draft_with_payment', $cases, true), 'Draft/payment mi
 requireCondition(in_array('category_opposite_direction', $cases, true), 'Category mismatch missing.');
 requireCondition(!in_array('paid_without_payment', $cases, true),
     'Other-company paid document produced a false alert.');
+if (getenv('AUDIT_FULL_STACK') === 'yes') {
+    $fiscalCases = array_values(array_filter($findings['findings'],
+        static fn ($f): bool => $f->caseKey === 'fiscal_gross_mismatch'));
+    requireCondition(count($fiscalCases) === 1,
+        'Grouped NFS-e receipts produced an unexpected number of mismatches.');
+    requireCondition($fiscalCases[0]->classification === 'suspected'
+        && $fiscalCases[0]->evidence['invoice_id'] === $categoryMismatch
+        && $fiscalCases[0]->evidence['fiscal_gross_cents'] === 1000
+        && $fiscalCases[0]->evidence['invoice_total_cents'] === 900,
+        'Fiscal aggregate and invoice did not reconcile in exact cents.');
+    $frra = (new \Modules\AkauntingReports\Support\Audit\FrraIntegrityReader())
+        ->read($company1, 'BRL');
+    $capital = (new \Modules\AkauntingReports\Support\Audit\CapitalIntegrityReader())
+        ->read($company1, 'BRL');
+    requireCondition($frra['available'] === false && $capital['available'] === false,
+        'Unconfigured cooperative sources must remain explicitly unavailable.');
+    foreach ($findings['findings'] as $finding) {
+        requireCondition($finding->classification !== 'confirmed',
+            'No synthetic unresolved case can be labelled a confirmed accounting error.');
+    }
+}
 $otherCompanyDenied = false;
 try {
     $service->inspect($company2, 'BRL');
