@@ -8,6 +8,7 @@ namespace Modules\AkauntingReports\Tests\Unit;
 
 use Modules\AkauntingReports\Support\CapitalSocialPolicy;
 use Modules\AkauntingReports\Support\CapitalSocialRules;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class CapitalSocialRulesTest extends TestCase
@@ -36,18 +37,24 @@ final class CapitalSocialRulesTest extends TestCase
         self::assertSame(2500, $withheld['amount_cents']);
     }
 
-    public function testUnpaidAndPartialPaymentsDoNotBecomeConfirmedCapital(): void
+    /** @return array<string, array{array<string,mixed>}> */
+    public static function unconfirmedDocumentCases(): array
     {
-        foreach ([
-            ['paid_cents' => 0, 'has_payment' => false],
-            ['paid_cents' => 3000],
-            ['paid_cents' => 10100],
-            ['status' => 'cancelled'],
-        ] as $case) {
-            $result = CapitalSocialRules::document([...self::paidDocument(), ...$case], 'BRL');
-            self::assertSame('revisao', $result['kind']);
-            self::assertSame(0, $result['amount_cents']);
-        }
+        return [
+            'unpaid' => [['paid_cents' => 0, 'has_payment' => false]],
+            'partially paid' => [['paid_cents' => 3000]],
+            'overpaid without matched deduction' => [['paid_cents' => 10100]],
+            'cancelled' => [['status' => 'cancelled']],
+        ];
+    }
+
+    #[DataProvider('unconfirmedDocumentCases')]
+    public function testUnconfirmedDocumentsDoNotBecomeCapital(array $changes): void
+    {
+        $result = CapitalSocialRules::document([...self::paidDocument(), ...$changes], 'BRL');
+
+        self::assertSame('revisao', $result['kind']);
+        self::assertSame(0, $result['amount_cents']);
     }
 
     public function testUnknownTransactionsCannotBeClassifiedAsDirectCapital(): void

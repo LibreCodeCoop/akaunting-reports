@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Modules\AkauntingReports\Tests\Unit;
 
 use Modules\AkauntingReports\Support\FrraAnnualMatrix;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FrraAnnualMatrixTest extends TestCase
@@ -62,13 +63,26 @@ final class FrraAnnualMatrixTest extends TestCase
         self::assertSame(1000, $result['months'][12]);
     }
 
-    public function testAccountingCompetenceMustBeExplicitAndValid(): void
+    /** @return array<string, array{string, ?string}> */
+    public static function competenceDescriptions(): array
     {
-        self::assertSame('2026-09', FrraAnnualMatrix::competence('Referente ao ano/mês: 2026-09'));
-        foreach (['2026-09', '2026-13', 'Referente ao ano/mês: 2026-00',
-            'Referente ao ano/mês: 2026-9', 'September 2026', ''] as $invalid) {
-            self::assertNull(FrraAnnualMatrix::competence($invalid), $invalid);
-        }
+        return [
+            'explicit accounting month' => ['Referente ao ano/mês: 2026-09', '2026-09'],
+            'bare month' => ['2026-09', null],
+            'bare invalid month' => ['2026-13', null],
+            'zero month' => ['Referente ao ano/mês: 2026-00', null],
+            'non-padded month' => ['Referente ao ano/mês: 2026-9', null],
+            'natural language month' => ['September 2026', null],
+            'missing description' => ['', null],
+        ];
+    }
+
+    #[DataProvider('competenceDescriptions')]
+    public function testCompetenceRequiresAnExplicitValidAccountingMonth(
+        string $description,
+        ?string $expectedCompetence
+    ): void {
+        self::assertSame($expectedCompetence, FrraAnnualMatrix::competence($description));
     }
 
     public function testYearAndMemberFiltersUseOnlyAuditedEntries(): void

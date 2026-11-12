@@ -7,22 +7,47 @@ declare(strict_types=1);
 namespace Modules\AkauntingReports\Tests\Unit;
 
 use Modules\AkauntingReports\Support\Money;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use UnexpectedValueException;
 
 final class MoneyTest extends TestCase
 {
-    public function testDecimalAmountsAreConvertedToIntegerCentsWithoutRounding(): void
+    /** @return array<string, array{string, int}> */
+    public static function decimalAmounts(): array
     {
-        self::assertSame(253, Money::cents('2.53'));
-        self::assertSame(-253, Money::cents('-2.53'));
-        self::assertSame(0, Money::cents('0.00'));
-        self::assertSame(123400, Money::cents('1234'));
+        return [
+            'positive cents' => ['2.53', 253],
+            'negative cents' => ['-2.53', -253],
+            'zero' => ['0.00', 0],
+            'whole amount' => ['1234', 123400],
+            'insignificant trailing zeros' => ['2.5300', 253],
+        ];
     }
 
-    public function testFractionalCentsAreRejected(): void
+    #[DataProvider('decimalAmounts')]
+    public function testDecimalAmountsAreConvertedToIntegerCentsWithoutRounding(
+        string $amount,
+        int $expectedCents
+    ): void {
+        self::assertSame($expectedCents, Money::cents($amount));
+    }
+
+    /** @return array<string, array{string}> */
+    public static function invalidAmounts(): array
+    {
+        return [
+            'fractional cent' => ['2.351'],
+            'localized separator without conversion' => ['1,25'],
+            'not numeric' => ['invalid'],
+            'outside safe integer precision' => ['12345678901234567'],
+        ];
+    }
+
+    #[DataProvider('invalidAmounts')]
+    public function testInvalidAmountsAreRejected(string $amount): void
     {
         $this->expectException(UnexpectedValueException::class);
-        Money::cents('2.351');
+        Money::cents($amount);
     }
 }

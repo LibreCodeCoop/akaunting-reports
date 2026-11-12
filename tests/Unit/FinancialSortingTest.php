@@ -8,23 +8,35 @@ namespace Modules\AkauntingReports\Tests\Unit;
 
 use Modules\AkauntingReports\Support\CapitalSocialSorter;
 use Modules\AkauntingReports\Support\FrraAnnualSorter;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FinancialSortingTest extends TestCase
 {
-    public function testFrraDefaultsToMemberNameAndSortsTotalsNumerically(): void
+    /** @return array<string,array{?string,?string,list<int>}> */
+    public static function frraSortCases(): array
     {
+        return [
+            'default name ascending' => [null, null, [1, 3, 2]],
+            'total descending numerically' => ['total_cents', 'desc', [1, 2, 3]],
+            'invalid column falls back to name' => ['not_allowed', 'desc', [1, 3, 2]],
+        ];
+    }
+
+    #[DataProvider('frraSortCases')]
+    public function testFrraSortingFollowsAllowedBusinessChoices(
+        ?string $column,
+        ?string $direction,
+        array $expectedContacts
+    ): void {
         $rows = [
             ['contact_id'=>2,'name'=>'Zulu','total_cents'=>250],
             ['contact_id'=>1,'name'=>'Alpha','total_cents'=>1000],
             ['contact_id'=>3,'name'=>'Beta','total_cents'=>100],
         ];
-        self::assertSame([1,3,2],
-            array_column(FrraAnnualSorter::sort($rows, null, null), 'contact_id'));
-        self::assertSame([1,2,3],
-            array_column(FrraAnnualSorter::sort($rows, 'total_cents', 'desc'), 'contact_id'));
-        self::assertSame([1,3,2],
-            array_column(FrraAnnualSorter::sort($rows, 'not_allowed', 'desc'), 'contact_id'));
+
+        self::assertSame($expectedContacts,
+            array_column(FrraAnnualSorter::sort($rows, $column, $direction), 'contact_id'));
     }
 
     public function testCapitalSocialAllowsAuthorizedAggregateSortingOnly(): void
