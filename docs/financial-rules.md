@@ -11,9 +11,9 @@ The balance includes confirmed contributions and production withholdings, less d
 
 A member capital balance is not a register of subscribed or unpaid cooperative shares.
 
-## Annual FRRA
+## Annual member reserve
 
-Each month is determined by the explicit accounting competence on an item, not by issuance, due or settlement date. Production documents are the primary evidence. Annual reserve bills only supplement months absent from a member's production documents. Source conflicts are reported without double-counting.
+This cooperative-specific reserve report is not a payroll implementation of statutory thirteenth-month pay.\n\nEach month is determined by the explicit accounting competence on an item, not by issuance, due or settlement date. Production documents are the primary evidence. Annual reserve bills only supplement months absent from a member's production documents. Source conflicts are reported without double-counting.
 
 Items with ambiguous monthly competence are shown separately when their year is identifiable; no arbitrary allocation is made. Draft documents are **registered**, not necessarily paid. The report does not infer funds available for settlement.
 

@@ -10,7 +10,7 @@ O [Akaunting](https://akaunting.com/) reúne informações financeiras da sua or
 Este repositório reúne nosso módulo de relatórios nativos, reutilizável em instalações do Akaunting. Os exemplos atuais são:
 
 - **Capital Social:** posição por cooperado, integralizações, retenções, devoluções e extrato auditável, com valores pendentes separados dos confirmados.
-- **FRRA Anual:** retenções por cooperado e competência, visão mensal e anual, confronto entre documentos de produção e faturas anuais e indicação de divergências.
+- **FRA Anual:** retenções por cooperado e competência, visão mensal e anual, confronto entre documentos de produção e faturas anuais e indicação de divergências.
 
 Ambos utilizam a interface de relatórios do Akaunting, com filtros e exportação. A apuração é somente leitura; não cria pagamentos nem altera saldos.
 
