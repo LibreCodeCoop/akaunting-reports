@@ -1,6 +1,6 @@
 {{-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors --}}
 {{-- SPDX-License-Identifier: AGPL-3.0-or-later --}}
-<div id="widget-{{ $class->model->id }}" class="{{ $class->model->settings->width }} my-8">
+<div id="widget-{{ $class->model->id }}" class="{{ $class->model->settings->width ?? $class->model->getWidthAttribute($class->getDefaultSettings()['width']) }} my-8">
     @include($class->views['header'], ['header_class' => ''])
 
     <div class="grid grid-cols-3 gap-3 my-3 text-center">

@@ -115,7 +115,23 @@ jobs:
           test -s /tmp/audit-report.png
           test -s /tmp/audit-widget.png
           test -s /tmp/capital-widget.png
-          file /tmp/audit-report.png /tmp/audit-widget.png /tmp/capital-widget.png
+          # The real dashboard uses flex-wrap; verify two columns on desktop
+          # and stacked cards on mobile, using native Akaunting CSS and no overrides.
+          for viewport in desktop:1440,960 mobile:760,960; do
+            label="${viewport%%:*}"
+            size="${viewport#*:}"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+              --hide-scrollbars --window-size="$size" --dump-dom \
+              file:///tmp/dashboard-widget-layout-preview.html > "/tmp/widget-layout-$label.html"
+            grep -Fq 'data-widget-layout="pass"' "/tmp/widget-layout-$label.html"
+            "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+              --hide-scrollbars --window-size="$size" \
+              --screenshot="/tmp/dashboard-widget-$label.png" \
+              file:///tmp/dashboard-widget-layout-preview.html
+            test -s "/tmp/dashboard-widget-$label.png"
+          done
+          file /tmp/audit-report.png /tmp/audit-widget.png /tmp/capital-widget.png \
+            /tmp/dashboard-widget-desktop.png /tmp/dashboard-widget-mobile.png
       - name: Upload synthetic screenshot evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -124,5 +140,7 @@ jobs:
             /tmp/audit-report.png
             /tmp/audit-widget.png
             /tmp/capital-widget.png
+            /tmp/dashboard-widget-desktop.png
+            /tmp/dashboard-widget-mobile.png
           if-no-files-found: error
           retention-days: 30

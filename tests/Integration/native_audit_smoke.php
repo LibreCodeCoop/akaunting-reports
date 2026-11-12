@@ -243,6 +243,25 @@ requireCondition(str_contains($widgetHtml, route('reports.show', $reportModel->i
     && str_contains($widgetHtml, trans('widgets.view_report')),
     'Audit widget omitted the native link to its own company report.');
 
+// Akaunting's creation modal permits an empty width. Use the core model's
+// width mapping for the widget default rather than rendering an un-sized flex item.
+$auditWidgetModel->settings = (object) ['width' => null, 'limit' => null];
+$auditUnsetWidthHtml = $widget->show()->render();
+requireCondition(str_contains($auditUnsetWidthHtml,
+    'id="widget-901" class="w-full lg:w-2/4 lg:px-6 my-8"'),
+    'Audit widget with a null width did not use the native default layout.');
+$auditWidgetModel->settings = (object) [];
+$auditMissingWidthHtml = $widget->show()->render();
+requireCondition(str_contains($auditMissingWidthHtml,
+    'id="widget-901" class="w-full lg:w-2/4 lg:px-6 my-8"'),
+    'Audit widget with a missing width did not use the native default layout.');
+$auditWidgetModel->settings = (object) ['width' => '25'];
+$auditQuarterWidthHtml = $widget->show()->render();
+requireCondition(str_contains($auditQuarterWidthHtml,
+    'id="widget-901" class="w-full lg:w-1/4 lg:px-6 my-8"'),
+    'Audit widget ignored a valid 25 percent native width.');
+$auditWidgetModel->settings = (object) ['width' => '50'];
+
 // No cross-company fallback should produce a link to this company's report.
 App\Models\Common\Company::findOrFail($company2)->makeCurrent();
 requireCondition($widget->getReportUrl() === '',
@@ -264,6 +283,26 @@ requireCondition(str_contains($capitalWidgetHtml, 'id="widget-902" class="w-full
     'Unconfigured capital widget omitted native sizing or edit/delete menu.');
 requireCondition(str_contains($capitalWidgetHtml, trans('akaunting-reports::ui.capital_widget_unconfigured')),
     'Unconfigured capital widget failed to explain its state.');
+
+// The same core 50% width must be used for an unconfigured capital widget
+// when the optional width selection was left blank in the native modal.
+$capitalWidgetModel->settings = (object) ['width' => null];
+$capitalDefaultHtml = view('akaunting-reports::widgets.capital-social', [
+    'class' => $capitalWidget, 'configured' => false, 'metrics' => null,
+    'asOf' => now()->toDateString(),
+])->render();
+requireCondition(str_contains($capitalDefaultHtml,
+    'id="widget-902" class="w-full lg:w-2/4 lg:px-6 my-8"'),
+    'Capital widget with a null width did not use the native default layout.');
+$capitalWidgetModel->settings = (object) ['width' => '100'];
+$capitalFullWidthHtml = view('akaunting-reports::widgets.capital-social', [
+    'class' => $capitalWidget, 'configured' => false, 'metrics' => null,
+    'asOf' => now()->toDateString(),
+])->render();
+requireCondition(str_contains($capitalFullWidthHtml,
+    'id="widget-902" class="w-full px-6 my-8"'),
+    'Capital widget ignored a valid 100 percent native width.');
+$capitalWidgetModel->settings = (object) ['width' => '50'];
 $capitalConfiguredHtml = view('akaunting-reports::widgets.capital-social', [
     'class' => $capitalWidget, 'configured' => true,
     'metrics' => ['total_cents' => 12345, 'pending_count' => 2, 'warnings_count' => 1],
@@ -272,6 +311,30 @@ $capitalConfiguredHtml = view('akaunting-reports::widgets.capital-social', [
 requireCondition(str_contains($capitalConfiguredHtml, trans('akaunting-reports::ui.capital_widget_equity_note'))
     && str_contains($capitalConfiguredHtml, 'show-more-actions-widget-902'),
     'Configured capital widget lost native actions or financial context.');
+
+// Render the two new widgets together in the real dashboard flex structure.
+$capitalWidgetModel->settings = (object) ['width' => null];
+$capitalResponsiveHtml = view('akaunting-reports::widgets.capital-social', [
+    'class' => $capitalWidget, 'configured' => true,
+    'metrics' => ['total_cents' => 12345, 'pending_count' => 2, 'warnings_count' => 1],
+    'asOf' => now()->toDateString(),
+])->render();
+requireCondition(str_contains($capitalResponsiveHtml,
+    'id="widget-902" class="w-full lg:w-2/4 lg:px-6 my-8"'),
+    'Configured capital widget with missing width did not inherit core layout.');
+$dashboardWidgetsHtml = '<div class="dashboard flex flex-wrap px-6 lg:-mx-12">'
+    . $auditUnsetWidthHtml . $capitalResponsiveHtml . '</div>';
+$dashboardGeometryProbe = <<<'HTML'
+<script>
+const first = document.getElementById('widget-901').getBoundingClientRect();
+const second = document.getElementById('widget-902').getBoundingClientRect();
+const wide = window.innerWidth >= 1024;
+const aligned = wide
+    ? Math.abs(first.top - second.top) <= 2 && second.left >= first.right - 2
+    : second.top >= first.bottom && Math.abs(first.width - second.width) <= 2;
+document.documentElement.setAttribute('data-widget-layout', aligned ? 'pass' : 'fail');
+</script>
+HTML;
 
 // Render actual native Blade content with Akaunting's stylesheet.
 // All data in this isolated preview are synthetic.
@@ -299,6 +362,9 @@ requireCondition(file_put_contents('/tmp/audit-widget-preview.html',
 requireCondition(file_put_contents('/tmp/capital-widget-preview.html',
     $preview('Member capital widget', $capitalConfiguredHtml)) !== false,
     'No capital widget preview.');
+requireCondition(file_put_contents('/tmp/dashboard-widget-layout-preview.html',
+    $preview('Responsive financial widgets', $dashboardWidgetsHtml . $dashboardGeometryProbe)) !== false,
+    'No native dashboard layout preview.');
 requireCondition($before === $ledger(), 'Audit changed an accounting document or transaction.');
 
 Auth::logout();
