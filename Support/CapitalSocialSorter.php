@@ -21,13 +21,13 @@ final class CapitalSocialSorter
     public static function overviewOptions(): array
     {
         return [
-            'pending' => 'Pendências e ressalvas',
-            'last_contribution_date' => 'Última integralização',
-            'saldo_cents' => 'Saldo',
-            'name' => 'Cooperado',
-            'direct_cents' => 'Integralização direta',
-            'retained_cents' => 'Retenção na produção',
-            'devolvido_cents' => 'Devoluções',
+            'pending' => trans('akaunting-reports::ui.pending_with_warnings'),
+            'last_contribution_date' => trans('akaunting-reports::ui.last_contribution'),
+            'saldo_cents' => trans('akaunting-reports::ui.balance'),
+            'name' => trans('akaunting-reports::ui.member'),
+            'direct_cents' => trans('akaunting-reports::ui.direct_contribution'),
+            'retained_cents' => trans('akaunting-reports::ui.retained_production'),
+            'devolvido_cents' => trans('akaunting-reports::ui.refunds'),
         ];
     }
 

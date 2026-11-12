@@ -16,10 +16,10 @@ use RuntimeException;
 final class FrraAnnualLedger
 {
     /**
-     * @param array{production_category_id:int,annual_category_id:int,production_prefix:string,annual_prefix:string,item_name:string} $policy
+     * @param array{production_category_id:int,annual_category_id:int,production_prefix:string,annual_prefix:string,item_name:string,currency_code:string} $policy
      * @return array{
      *     entries:list<array<string,mixed>>,undated_count:int,invalid_amount_count:int,
-     *     non_brl_count:int,excluded_status_count:int,
+     *     currency_mismatch_count:int,excluded_status_count:int,
      *     unallocated_by_year:array<int,array{items:int,cents:int}>
      * }
      */
@@ -29,7 +29,7 @@ final class FrraAnnualLedger
             || $policy['annual_category_id'] <= 0
             || $policy['production_category_id'] === $policy['annual_category_id']
             || $policy['production_prefix'] === '' || $policy['annual_prefix'] === ''
-            || $policy['item_name'] === '') {
+            || $policy['item_name'] === '' || !preg_match('/^[A-Z]{3}$/D', (string) ($policy['currency_code'] ?? ''))) {
             throw new RuntimeException('Invalid company-specific FRRA configuration.');
         }
 
@@ -53,7 +53,7 @@ final class FrraAnnualLedger
 
         $result = [
             'entries' => [], 'undated_count' => 0, 'invalid_amount_count' => 0,
-            'non_brl_count' => 0, 'excluded_status_count' => 0, 'unallocated_by_year' => [],
+            'currency_mismatch_count' => 0, 'excluded_status_count' => 0, 'unallocated_by_year' => [],
         ];
         $allowedStatuses = ['draft', 'sent', 'viewed', 'partial', 'paid', 'overdue', 'unpaid'];
 
@@ -74,10 +74,10 @@ final class FrraAnnualLedger
                 ++$result['excluded_status_count'];
                 continue;
             }
-            // Exclude non-BRL items before both monthly allocation and
-            // historical unallocated totals, which are displayed in BRL.
-            if ($row->currency_code !== 'BRL') {
-                ++$result['non_brl_count'];
+            // Exclude unexpected currencies before monthly allocation or
+            // historical unallocated totals.
+            if ($row->currency_code !== $policy['currency_code']) {
+                ++$result['currency_mismatch_count'];
                 continue;
             }
             $competence = FrraAnnualMatrix::competence((string) $row->description);

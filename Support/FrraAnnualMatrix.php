@@ -182,7 +182,7 @@ final class FrraAnnualMatrix
         $labelCounts = [];
         foreach ($members as $member) {
             $label = trim((string) $member['name']);
-            $label = $label !== '' ? $label : 'Contato sem nome';
+            $label = $label !== '' ? $label : trans('akaunting-reports::ui.contact_without_name');
             $labelCounts[mb_strtolower($label)] = ($labelCounts[mb_strtolower($label)] ?? 0) + 1;
         }
 
@@ -190,7 +190,7 @@ final class FrraAnnualMatrix
         foreach ($members as $member) {
             $id = (int) $member['contact_id'];
             $label = trim((string) $member['name']);
-            $label = $label !== '' ? $label : 'Contato sem nome';
+            $label = $label !== '' ? $label : trans('akaunting-reports::ui.contact_without_name');
             // Different contacts with the same name are not silently merged.
             if ($labelCounts[mb_strtolower($label)] > 1) {
                 $label .= ' (cadastro #' . $id . ')';

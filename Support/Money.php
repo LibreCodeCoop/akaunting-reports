@@ -28,8 +28,4 @@ final class Money
         return ($matches[1] === '-') ? -$cents : $cents;
     }
 
-    public static function format(int $cents): string
-    {
-        return number_format($cents / 100, 2, ',', '.');
-    }
 }

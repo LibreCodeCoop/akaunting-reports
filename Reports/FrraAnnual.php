@@ -34,13 +34,6 @@ final class FrraAnnual extends Report
     public ?string $configurationError = null;
     /** @var array<string,mixed>|null */
     private ?array $sourceLedger = null;
-    /** @var array<int,string> */
-    public array $monthNames = [
-        1 => 'Jan', 2 => 'Fev', 3 => 'Mar', 4 => 'Abr',
-        5 => 'Mai', 6 => 'Jun', 7 => 'Jul', 8 => 'Ago',
-        9 => 'Set', 10 => 'Out', 11 => 'Nov', 12 => 'Dez',
-    ];
-
     public function setViews(): void
     {
         parent::setViews();
@@ -69,7 +62,7 @@ final class FrraAnnual extends Report
             [
                 'type' => 'select',
                 'name' => 'year',
-                'title' => 'Ano de competência',
+                'title' => trans('akaunting-reports::ui.competence_year'),
                 'values' => $this->yearOptions(),
                 'selected' => $this->defaultYear(),
                 'placement' => 'strip',
@@ -78,7 +71,7 @@ final class FrraAnnual extends Report
             [
                 'type' => 'select',
                 'name' => 'default_sort',
-                'title' => 'Ordenação padrão',
+                'title' => trans('akaunting-reports::ui.default_sort'),
                 'values' => FrraAnnualSorter::options(),
                 'selected' => $column,
                 'attributes' => [],
@@ -86,8 +79,8 @@ final class FrraAnnual extends Report
             [
                 'type' => 'select',
                 'name' => 'default_direction',
-                'title' => 'Direção da ordenação padrão',
-                'values' => ['asc' => 'Crescente', 'desc' => 'Decrescente'],
+                'title' => trans('akaunting-reports::ui.default_direction'),
+                'values' => ['asc' => trans('akaunting-reports::ui.ascending'), 'desc' => trans('akaunting-reports::ui.descending')],
                 'selected' => $direction,
                 'attributes' => [],
             ],
@@ -99,7 +92,7 @@ final class FrraAnnual extends Report
         parent::setFilters();
         $this->filters['year'] = $this->yearOptions();
         $this->filters['keys']['year'] = 'year';
-        $this->filters['names']['year'] = 'Ano de competência';
+        $this->filters['names']['year'] = trans('akaunting-reports::ui.competence_year');
         $this->filters['defaults']['year'] = (string) $this->defaultYear();
         $this->filters['operators']['year'] = [
             'equal' => true, 'not_equal' => false, 'multiple' => false, 'range' => false,
@@ -110,7 +103,7 @@ final class FrraAnnual extends Report
         $this->filters['member'] = $ledger === null ? []
             : FrraAnnualMatrix::memberOptions($ledger['entries'], $this->requestedYear());
         $this->filters['keys']['member'] = 'member';
-        $this->filters['names']['member'] = 'Cooperado';
+        $this->filters['names']['member'] = trans('akaunting-reports::ui.member');
         $this->filters['operators']['member'] = [
             'equal' => true, 'not_equal' => false, 'multiple' => false, 'range' => false,
         ];
@@ -129,7 +122,7 @@ final class FrraAnnual extends Report
 
         $ledger = $this->readSources($company);
         if ($ledger === null) {
-            $this->configurationError = 'Configure as origens de FRRA desta empresa antes de utilizar o relatório.';
+            $this->configurationError = trans('akaunting-reports::ui.frra_config_error');
             $this->summary = FrraAnnualMatrix::build([], $this->selectedYear);
             return;
         }
@@ -186,6 +179,7 @@ final class FrraAnnual extends Report
             'production_prefix' => (string) ($settings[$p . 'production_prefix'] ?? ''),
             'annual_prefix' => (string) ($settings[$p . 'annual_prefix'] ?? ''),
             'item_name' => (string) ($settings[$p . 'item_name'] ?? ''),
+            'currency_code' => default_currency(),
         ];
         if ($policy['production_category_id'] <= 0 || $policy['annual_category_id'] <= 0
             || $policy['production_prefix'] === '' || $policy['annual_prefix'] === ''
@@ -203,13 +197,13 @@ final class FrraAnnual extends Report
             if ($out === false) {
                 throw new \RuntimeException('Cannot open CSV stream.');
             }
-            $columns = ['Cooperado'];
-            foreach ($this->monthNames as $month) {
-                $columns[] = $month . '/' . $this->selectedYear . ' (BRL)';
+            $columns = [trans('akaunting-reports::ui.member')];
+            foreach (range(1, 12) as $month) {
+                $columns[] = trans('akaunting-reports::ui.months.' . $month) . '/' . $this->selectedYear . ' (' . default_currency() . ')';
             }
-            $columns[] = 'Total anual (BRL)';
-            $columns[] = 'Retenção na produção (BRL)';
-            $columns[] = 'Complemento da fatura anual (BRL)';
+            $columns[] = trans('akaunting-reports::ui.total_annual') . ' (' . default_currency() . ')';
+            $columns[] = trans('akaunting-reports::ui.retained_production') . ' (' . default_currency() . ')';
+            $columns[] = trans('akaunting-reports::ui.annual_bill_supplement') . ' (' . default_currency() . ')';
             fputcsv($out, $columns);
             foreach ($this->summary['members'] as $member) {
                 $values = [self::safeCsv((string) $member['name'])];
@@ -221,7 +215,7 @@ final class FrraAnnual extends Report
                 $values[] = self::decimal($member['annual_cents']);
                 fputcsv($out, $values);
             }
-            $totals = ['TOTAL'];
+            $totals = [trans('akaunting-reports::ui.total')];
             foreach ($this->summary['months'] as $cents) {
                 $totals[] = self::decimal((int) $cents);
             }

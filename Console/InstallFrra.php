@@ -26,7 +26,13 @@ final class InstallFrra extends Command
         {--item-name=FRRA : Exact name of the FRRA document item}
         {--dry-run : Validate without changing any database records}';
 
-    protected $description = 'Register the annual FRRA matrix for one company (read only)';
+    protected $description = '';
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->setDescription(trans('akaunting-reports::cli.frra_description'));
+    }
 
     public function handle(): int
     {
@@ -42,19 +48,19 @@ final class InstallFrra extends Command
             || !self::validPrefix($productionPrefix) || !self::validPrefix($annualPrefix)
             || $productionPrefix === $annualPrefix
             || $itemName === '' || mb_strlen($itemName) > 80) {
-            $this->error('Use an existing company, two distinct categories, two exact document prefixes, and an item name.');
+            $this->error(trans('akaunting-reports::cli.frra_invalid_options'));
             return self::FAILURE;
         }
         if (!DB::table('companies')->where('id', $company)->exists()
             || DB::table('categories')->where('company_id', $company)
                 ->whereIn('id', [$productionCategory, $annualCategory])
                 ->where('type', 'expense')->count() !== 2) {
-            $this->error('Both expense categories must exist in the selected company.');
+            $this->error(trans('akaunting-reports::cli.frra_categories_missing'));
             return self::FAILURE;
         }
 
         if ($this->option('dry-run')) {
-            $this->info('FRRA configuration validated; no writes performed.');
+            $this->info(trans('akaunting-reports::cli.frra_dry_run'));
             return self::SUCCESS;
         }
 
@@ -80,8 +86,8 @@ final class InstallFrra extends Command
                 DB::table('reports')->insert([
                     'company_id' => $company,
                     'class' => FrraAnnual::class,
-                    'name' => 'FRRA Anual',
-                    'description' => 'Retenções de FRRA por mês e cooperado, com totais anuais e conciliação de fontes.',
+                    'name' => trans('akaunting-reports::ui.frra_annual'),
+                    'description' => trans('akaunting-reports::ui.frra_reconciliation'),
                     'settings' => json_encode(['year' => (string) now()->year], JSON_THROW_ON_ERROR),
                     'created_from' => 'akaunting-reports::install',
                     'created_at' => now(),
@@ -97,7 +103,7 @@ final class InstallFrra extends Command
         );
         $this->attachPermissionsToAdminRoles([$permission]);
 
-        $this->info('Annual FRRA registered for the selected company; no accounting movements changed.');
+        $this->info(trans('akaunting-reports::cli.frra_installed'));
         return self::SUCCESS;
     }
 

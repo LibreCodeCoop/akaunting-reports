@@ -220,7 +220,7 @@ final class CapitalSocialLedger
                 'type' => (string) $document->type,
                 'status' => (string) $document->status,
                 'currency_code' => (string) $document->currency_code,
-            ]);
+            ], $policy->currencyCode);
             $rows[] = self::movement('document', $id, $identities[$key], $key,
                 (string) $document->name, $lastPaidAt ?? (string) $document->due_at,
                 $evaluated, (string) $document->currency_code, (string) $document->type, abs($capital));

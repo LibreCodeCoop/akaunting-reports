@@ -6,14 +6,44 @@ declare(strict_types=1);
 
 namespace Modules\AkauntingReports\Support;
 
-/**
- * Presentation-only labels for financial classification.
- * This class never modifies records or considers a manual click sufficient
- * evidence of integralization.
- */
+/** Translate stable financial review classifications at the presentation boundary. */
 final class CapitalSocialReview
 {
     private const UNPAID = 'Unpaid document: capital is not yet confirmed.';
+
+    private const REASON_KEYS = [
+        self::UNPAID => 'waiting_payment',
+        'Partially paid document: capital allocation needs review.' => 'review_partial',
+        'Capital-related transaction references a non-capital document.' => 'review_link',
+        'Cancelled or voided document must be reconciled separately.' => 'review_cancelled',
+        'Payments exceed the document amount.' => 'review_payments',
+        'Foreign-currency document requires verified conversion.' => 'review_conversion',
+        'Currency or amount needs verification.' => 'review_currency',
+        'Transaction has insufficient or ambiguous capital classification.' => 'review_classification',
+        'Unsupported document type.' => 'review_type',
+        'Document contains ambiguous capital items or direction.' => 'review_items',
+    ];
+
+    private const SHORT_KEYS = [
+        'waiting_payment' => 'payment_pending_short',
+        'review_link' => 'review_link_short',
+        'confirmed_reservation' => 'confirmed_reservation_short',
+        'review_conversion' => 'review_conversion_short',
+        'review_currency' => 'review_currency_short',
+        'review_classification' => 'review_classification_short',
+        'review_type' => 'review_type_short',
+        'review_items' => 'review_items_short',
+    ];
+
+    private const GUIDANCE_KEYS = [
+        self::UNPAID => 'payment_help',
+        'Partially paid document: capital allocation needs review.' => 'guidance_partial',
+        'Capital-related transaction references a non-capital document.' => 'guidance_document_link',
+        'Cancelled or voided document must be reconciled separately.' => 'guidance_cancelled',
+        'Payments exceed the document amount.' => 'guidance_excess_payment',
+        'Foreign-currency document requires verified conversion.' => 'review_currency_help',
+        'Currency or amount needs verification.' => 'review_currency_help',
+    ];
 
     public static function category(array $row): string
     {
@@ -26,60 +56,43 @@ final class CapitalSocialReview
     public static function label(array $row): string
     {
         if (($row['status'] ?? '') === 'confirmado') {
-            return empty($row['reason']) ? 'Confirmada' : 'Confirmada com ressalva';
+            $key = empty($row['reason']) ? 'confirmed' : 'confirmed_reservation';
+        } else {
+            $key = self::REASON_KEYS[(string) ($row['reason'] ?? '')] ?? 'review_required';
         }
-
-        return match ((string) ($row['reason'] ?? '')) {
-            self::UNPAID => 'Aguardando pagamento',
-            'Partially paid document: capital allocation needs review.' => 'Pagamento parcial',
-            'Capital-related transaction references a non-capital document.' => 'Revisar vínculo documental',
-            'Cancelled or voided document must be reconciled separately.' => 'Documento cancelado',
-            'Payments exceed the document amount.' => 'Pagamentos divergentes',
-            'Foreign-currency document requires verified conversion.' => 'Conversão de moeda pendente',
-            'Currency or amount needs verification.' => 'Moeda ou valor a verificar',
-            'Transaction has insufficient or ambiguous capital classification.' => 'Classificação de capital indefinida',
-            'Unsupported document type.' => 'Tipo de documento não suportado',
-            'Document contains ambiguous capital items or direction.' => 'Itens de capital inconsistentes',
-            default => 'Conferência necessária',
-        };
+        return trans('akaunting-reports::ui.' . $key);
     }
 
-    /** Keep the full reason in the title and in exports; use compact labels in the table. */
     public static function shortLabel(string $label): string
     {
-        return match ($label) {
-            'Aguardando pagamento' => 'Pagamento pendente',
-            'Revisar vínculo documental' => 'Revisar vínculo',
-            'Confirmada com ressalva' => 'Confirmação com ressalva',
-            'Conversão de moeda pendente' => 'Converter moeda',
-            'Moeda ou valor a verificar' => 'Verificar moeda/valor',
-            'Classificação de capital indefinida' => 'Classificação indefinida',
-            'Tipo de documento não suportado' => 'Tipo não suportado',
-            'Itens de capital inconsistentes' => 'Itens inconsistentes',
-            default => $label,
-        };
+        foreach (self::SHORT_KEYS as $key => $short) {
+            if ($label === trans('akaunting-reports::ui.' . $key)) {
+                return trans('akaunting-reports::ui.' . $short);
+            }
+        }
+        return $label;
     }
 
     public static function guidance(array $row): string
     {
         if (($row['status'] ?? '') === 'confirmado') {
-            return empty($row['reason'])
-                ? 'Movimentação confirmada pelas regras financeiras atuais.'
-                : 'O saldo foi confirmado, mas há uma ressalva documental a examinar.';
+            return trans('akaunting-reports::ui.' .
+                (empty($row['reason']) ? 'confirmed_activities' : 'confirmed_warning_help'));
         }
-
-        return match ((string) ($row['reason'] ?? '')) {
-            self::UNPAID => 'Não requer aprovação no relatório. Após registrar e conciliar o pagamento no Akaunting, a situação será recalculada.',
-            'Partially paid document: capital allocation needs review.' => 'Confira a alocação do pagamento parcial. A integralização não pode ser presumida.',
-            'Capital-related transaction references a non-capital document.' => 'Confira o vínculo da transação com o documento e sua classificação de capital social.',
-            'Cancelled or voided document must be reconciled separately.' => 'Documento cancelado: verifique a necessidade de estorno ou registro de devolução.',
-            'Payments exceed the document amount.' => 'Confira pagamentos duplicados, adiantamentos e eventuais deduções posteriores.',
-            'Foreign-currency document requires verified conversion.', 'Currency or amount needs verification.' => 'Verifique moeda, conversão e valor na origem antes de reconhecer o capital.',
-            default => 'Abra a origem e corrija as informações contábeis, se necessário. O relatório recalcula automaticamente.',
-        };
+        $key = self::GUIDANCE_KEYS[(string) ($row['reason'] ?? '')] ?? 'review_source_help';
+        return trans('akaunting-reports::ui.' . $key);
     }
 
-    /** @param list<array<string,mixed>> $movements */
+    public static function reason(string $reason): string
+    {
+        if ($reason === '') {
+            return '';
+        }
+        $key = self::REASON_KEYS[$reason] ?? null;
+        return $key === null ? $reason : trans('akaunting-reports::ui.' . $key);
+    }
+
+    /** @return array{confirmed:int,awaiting_payment:int,requires_review:int} */
     public static function counts(array $movements): array
     {
         $counts = ['confirmed' => 0, 'awaiting_payment' => 0, 'requires_review' => 0];

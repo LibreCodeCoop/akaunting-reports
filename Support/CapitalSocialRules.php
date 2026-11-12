@@ -23,7 +23,7 @@ final class CapitalSocialRules
         if (($record['document_id'] ?? null) !== null) {
             return self::review('Capital-related transaction references a non-capital document.');
         }
-        if ((string) $record['currency_code'] !== 'BRL' || $amount <= 0) {
+        if ((string) $record['currency_code'] !== $policy->currencyCode || $amount <= 0) {
             return self::review('Currency or amount needs verification.');
         }
         if ((string) $record['type'] === 'income'
@@ -39,9 +39,9 @@ final class CapitalSocialRules
 
     /**
      * $document contains computed financial totals in cents, the number of capital lines and non-capital lines.
-     * @return array{kind:string,amount_cents:int,reason:string}
+     * @return array{kind:string,amount_cents:int,reason:string,confirmed_with_warning?:bool}
      */
-    public static function document(array $document): array
+    public static function document(array $document, string $companyCurrency): array
     {
         $total = (int) $document['document_amount_cents'];
         $paid = (int) $document['paid_cents'];
@@ -55,7 +55,7 @@ final class CapitalSocialRules
         if (in_array($status, ['cancelled', 'canceled', 'void'], true)) {
             return self::review('Cancelled or voided document must be reconciled separately.');
         }
-        if ($document['currency_code'] !== 'BRL') {
+        if ($document['currency_code'] !== $companyCurrency) {
             return self::review('Foreign-currency document requires verified conversion.');
         }
         if (!in_array($type, ['invoice', 'bill'], true)) {

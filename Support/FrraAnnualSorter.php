@@ -16,10 +16,10 @@ final class FrraAnnualSorter
     public static function options(): array
     {
         return [
-            'name' => 'Cooperado',
-            'total_cents' => 'Total anual',
-            'production_cents' => 'Retenção na produção',
-            'annual_cents' => 'Complemento da fatura anual',
+            'name' => trans('akaunting-reports::ui.member'),
+            'total_cents' => trans('akaunting-reports::ui.total_annual'),
+            'production_cents' => trans('akaunting-reports::ui.retained_production'),
+            'annual_cents' => trans('akaunting-reports::ui.annual_bill_supplement'),
         ];
     }
 
