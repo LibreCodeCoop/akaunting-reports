@@ -75,6 +75,13 @@
             </p>
         @endif
 
+        <div class="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" aria-label="Ordenação do FRRA">
+            <span class="text-gray-500">Ordenar:</span>
+            <x-sortablelink column="name" title="Cooperado" />
+            <x-sortablelink column="total_cents" title="Total anual" />
+            <x-sortablelink column="production_cents" title="Retido na produção" />
+            <x-sortablelink column="annual_cents" title="Complemento anual" />
+        </div>
         <div class="rounded-lg border border-gray-200 bg-white">
             <x-table aria-label="Retenções anuais de FRRA por cooperado" style="width: 100%;">
                 <x-table.thead class="hidden lg:block">

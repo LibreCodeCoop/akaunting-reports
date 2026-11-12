@@ -18,7 +18,12 @@ Akaunting login is disabled or their HR employee record is absent. Different
 financial contact IDs sharing a name are explicitly disambiguated rather
 than silently merged.
 The responsive layout avoids hidden horizontal scrolling. Native print/PDF
-and CSV contain the complete list, not a page.
+and CSV contain the complete list, not a page. By default, the member list
+is sorted by cooperative member name, ascending. The native report editor
+can instead save a default sort by annual total, production withholding,
+or annual-bill supplement, with ascending/descending direction. Native
+sorting links let viewers override the saved preference without changing
+the underlying FRRA ledger or export totals.
 
 Month/year comes from the **explicit competence in each document item**,
 not the invoice issue, due or payment date. Draft bills are included as

@@ -11,6 +11,7 @@ require_once __DIR__ . '/../Support/CapitalSocialSummary.php';
 require_once __DIR__ . '/../Support/CapitalSocialSorter.php';
 require_once __DIR__ . '/../Support/CapitalSocialReview.php';
 require_once __DIR__ . '/../Support/FrraAnnualMatrix.php';
+require_once __DIR__ . '/../Support/FrraAnnualSorter.php';
 
 use Modules\AkauntingReports\Support\Money;
 use Modules\AkauntingReports\Support\CapitalSocialPolicy;
@@ -580,4 +581,48 @@ check($frraLedger['non_brl_count'] === 2 && $frraLedger['undated_count'] === 1,
 check($frraLedger['unallocated_by_year'][2026]['cents'] === 700
     && count($frraLedger['entries']) === 1 && $frraLedger['entries'][0]['amount_cents'] === 300,
     'Undated BRL summary and dated ledger exclude synthetic USD and EUR amounts'); ++$tests;
+
+// FRRA sort preferences follow the native report editor without changing the ledger.
+$frraSortRows = [
+    ['contact_id'=>3, 'name'=>'Zeta', 'total_cents'=>2500, 'production_cents'=>2300, 'annual_cents'=>200],
+    ['contact_id'=>1, 'name'=>'Alfa', 'total_cents'=>900, 'production_cents'=>0, 'annual_cents'=>900],
+    ['contact_id'=>4, 'name'=>'Beta', 'total_cents'=>10000, 'production_cents'=>10000, 'annual_cents'=>0],
+    ['contact_id'=>2, 'name'=>'Beta', 'total_cents'=>10000, 'production_cents'=>10000, 'annual_cents'=>0],
+];
+$sorter = \Modules\AkauntingReports\Support\FrraAnnualSorter::class;
+check($sorter::defaults(null, null) === ['name', 'asc'],
+    'FRRA defaults to cooperative member alphabetical ascending'); ++$tests;
+check($sorter::defaults('total_cents', 'desc') === ['total_cents', 'desc']
+    && $sorter::defaults('bad_column', 'invalid') === ['name', 'asc'],
+    'FRRA native editor validates saved order and direction'); ++$tests;
+check(array_keys($sorter::options()) === ['name','total_cents','production_cents','annual_cents'],
+    'FRRA offers member name, annual total and both audited financial sources'); ++$tests;
+$sorted = $sorter::sort($frraSortRows, null, null);
+check(array_column($sorted, 'contact_id') === [1,2,4,3],
+    'FRRA default is alphabetical, deterministic for duplicate names'); ++$tests;
+check(array_column($sorter::sort($frraSortRows, 'total_cents', 'desc'), 'contact_id') === [2,4,3,1],
+    'FRRA annual amount sorts numerically in descending order'); ++$tests;
+check(array_column($sorter::sort($frraSortRows, 'production_cents', 'asc'), 'contact_id') === [1,3,2,4]
+    && array_column($sorter::sort($frraSortRows, 'annual_cents', 'desc'), 'contact_id') === [1,3,2,4],
+    'FRRA production and annual supplements are sortable independently'); ++$tests;
+check(array_column($sorter::sort($frraSortRows, null, null, 'total_cents', 'desc'), 'contact_id') === [2,4,3,1]
+    && array_column($sorter::sort($frraSortRows, 'name', 'asc', 'total_cents', 'desc'), 'contact_id') === [1,2,4,3],
+    'FRRA manual native sorting takes precedence over saved preference'); ++$tests;
+check(array_column($sorter::sort($frraSortRows, 'bad_column', 'desc', 'name', 'asc'), 'contact_id') === [1,2,4,3],
+    'FRRA unknown query columns cannot bypass sorting allowlist'); ++$tests;
+check(array_sum(array_column($sorter::sort($frraSortRows, 'total_cents', 'desc'), 'total_cents'))
+    === array_sum(array_column($frraSortRows, 'total_cents')),
+    'FRRA sorting never changes financial totals'); ++$tests;
+$frraReportCode = file_get_contents(__DIR__ . '/../Reports/FrraAnnual.php');
+$frraViewCode = file_get_contents(__DIR__ . '/../Resources/views/reports/frra-annual/content.blade.php');
+check(str_contains($frraReportCode, "'name' => 'default_sort'")
+    && str_contains($frraReportCode, "'name' => 'default_direction'")
+    && str_contains($frraReportCode, 'FrraAnnualSorter::sort('),
+    'FRRA report has native saved sorting preferences connected to display and CSV'); ++$tests;
+check(str_contains($frraViewCode, '<x-sortablelink column="name" title="Cooperado" />')
+    && str_contains($frraViewCode, '<x-sortablelink column="total_cents" title="Total anual" />')
+    && str_contains($frraViewCode, '<x-sortablelink column="production_cents"')
+    && str_contains($frraViewCode, '<x-sortablelink column="annual_cents"'),
+    'FRRA responsive view exposes native sortable links to all allowed columns'); ++$tests;
+
 echo "$tests business invariants passed\n";

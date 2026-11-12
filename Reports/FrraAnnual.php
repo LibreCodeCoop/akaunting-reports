@@ -11,6 +11,7 @@ use App\Utilities\Date;
 use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Support\FrraAnnualLedger;
 use Modules\AkauntingReports\Support\FrraAnnualMatrix;
+use Modules\AkauntingReports\Support\FrraAnnualSorter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /** Annual FRRA retained by member and competence, independent of payment date. */
@@ -59,15 +60,38 @@ final class FrraAnnual extends Report
 
     public function getFields(): array
     {
-        return [[
-            'type' => 'select',
-            'name' => 'year',
-            'title' => 'Ano de competência',
-            'values' => $this->yearOptions(),
-            'selected' => $this->defaultYear(),
-            'placement' => 'strip',
-            'attributes' => [],
-        ]];
+        [$column, $direction] = FrraAnnualSorter::defaults(
+            $this->model->settings->default_sort ?? null,
+            $this->model->settings->default_direction ?? null
+        );
+
+        return [
+            [
+                'type' => 'select',
+                'name' => 'year',
+                'title' => 'Ano de competência',
+                'values' => $this->yearOptions(),
+                'selected' => $this->defaultYear(),
+                'placement' => 'strip',
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'default_sort',
+                'title' => 'Ordenação padrão',
+                'values' => FrraAnnualSorter::options(),
+                'selected' => $column,
+                'attributes' => [],
+            ],
+            [
+                'type' => 'select',
+                'name' => 'default_direction',
+                'title' => 'Direção da ordenação padrão',
+                'values' => ['asc' => 'Crescente', 'desc' => 'Decrescente'],
+                'selected' => $direction,
+                'attributes' => [],
+            ],
+        ];
     }
 
     public function setFilters(): void
@@ -116,6 +140,17 @@ final class FrraAnnual extends Report
             ));
         }
         $this->summary = FrraAnnualMatrix::build($entries, $this->selectedYear);
+        [$defaultColumn, $defaultDirection] = FrraAnnualSorter::defaults(
+            $this->model->settings->default_sort ?? null,
+            $this->model->settings->default_direction ?? null
+        );
+        if (!request()->has('sort')) {
+            request()->merge(['sort' => $defaultColumn, 'direction' => $defaultDirection]);
+        }
+        $this->summary['members'] = FrraAnnualSorter::sort(
+            $this->summary['members'], request()->query('sort'), request()->query('direction'),
+            $defaultColumn, $defaultDirection
+        );
         $this->issues = array_diff_key($ledger, ['entries' => true]);
     }
 
