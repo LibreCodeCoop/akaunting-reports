@@ -11,6 +11,7 @@
         <ignoreFiles>
             <file name="Support/CapitalSocialLedger.php"/>
             <file name="Support/FrraAnnualLedger.php"/>
+            <file name="Support/Audit/FiscalReceiptReader.php"/>
         </ignoreFiles>
     </projectFiles>
 </psalm>
