@@ -49,7 +49,7 @@ final class CapitalAssemblyEvidence
                 throw new InvalidArgumentException('Invalid capital allocation sign or kind.');
             }
             $key = implode(':', [
-                $companyId, $event['deliberation_ref'], $event['source_revision'],
+                $companyId, $event['deliberation_ref'],
                 $event['allocation_ref'], $event['contact_id'],
             ]);
             $isDuplicate = isset($seen[$key]);
