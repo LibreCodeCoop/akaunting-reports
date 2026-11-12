@@ -61,6 +61,8 @@ final class AuditInconsistencies extends Report
 
     public function getFields(): array
     {
+        [$primary, $secondary, $tertiary] = $this->sortPreferences();
+
         return [
             [
                 'type' => 'select', 'name' => 'classification',
@@ -90,6 +92,69 @@ final class AuditInconsistencies extends Report
                 'title' => trans('akaunting-reports::audit.year'),
                 'values' => self::yearOptions(), 'selected' => 'all', 'attributes' => [],
             ],
+            [
+                'type' => 'select', 'name' => 'default_sort',
+                'title' => trans('akaunting-reports::ui.default_sort'),
+                'values' => FindingPage::sortOptions(),
+                'selected' => $primary[0], 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'default_direction',
+                'title' => trans('akaunting-reports::ui.default_direction'),
+                'values' => self::directionOptions(),
+                'selected' => $primary[1], 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'secondary_sort',
+                'title' => trans('akaunting-reports::ui.secondary_sort'),
+                'values' => FindingPage::sortOptions(),
+                'selected' => $secondary[0], 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'secondary_direction',
+                'title' => trans('akaunting-reports::ui.secondary_direction'),
+                'values' => self::directionOptions(),
+                'selected' => $secondary[1], 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'tertiary_sort',
+                'title' => trans('akaunting-reports::ui.tertiary_sort'),
+                'values' => FindingPage::sortOptions(),
+                'selected' => $tertiary[0], 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'tertiary_direction',
+                'title' => trans('akaunting-reports::ui.tertiary_direction'),
+                'values' => self::directionOptions(),
+                'selected' => $tertiary[1], 'attributes' => [],
+            ],
+        ];
+    }
+
+    /** @return array{array{string,string},array{string,string},array{string,string}} */
+    private function sortPreferences(): array
+    {
+        return [
+            FindingPage::primaryDefaults(
+                $this->model->settings->default_sort ?? null,
+                $this->model->settings->default_direction ?? null
+            ),
+            FindingPage::secondaryDefaults(
+                $this->model->settings->secondary_sort ?? null,
+                $this->model->settings->secondary_direction ?? null
+            ),
+            FindingPage::tertiaryDefaults(
+                $this->model->settings->tertiary_sort ?? null,
+                $this->model->settings->tertiary_direction ?? null
+            ),
+        ];
+    }
+
+    private static function directionOptions(): array
+    {
+        return [
+            'asc' => trans('akaunting-reports::ui.ascending'),
+            'desc' => trans('akaunting-reports::ui.descending'),
         ];
     }
 
@@ -138,11 +203,17 @@ final class AuditInconsistencies extends Report
         if (!is_scalar($requested) || !preg_match('/^[1-9][0-9]{0,3}$/D', (string) $requested)) {
             abort(422, trans('akaunting-reports::audit.invalid_page'));
         }
-        $sort = request()->query('sort', 'severity');
-        $direction = request()->query('direction', 'asc');
+        [$primary, $secondary, $tertiary] = $this->sortPreferences();
+        $sort = request()->query('sort', $primary[0]);
+        $direction = request()->query('direction', $sort === $primary[0] ? $primary[1] : 'asc');
         if (!is_string($sort) || !in_array($sort, FindingPage::SORT_COLUMNS, true)
             || !is_string($direction) || !in_array($direction, ['asc', 'desc'], true)) {
             abort(422, trans('akaunting-reports::audit.invalid_sort'));
+        }
+        // Match the native sortable headers: a saved preference is the primary
+        // order until the user explicitly sorts a column on this report page.
+        if (!request()->has('sort')) {
+            request()->merge(['sort' => $sort, 'direction' => $direction]);
         }
         $page = FindingPage::select($this->findings, [
             'classification' => $this->selectedClassification,
@@ -150,7 +221,10 @@ final class AuditInconsistencies extends Report
             'source' => $this->selectedSource,
             'rule' => $this->selectedRule,
             'year' => $this->selectedYear,
-        ], (int) $requested, 50, $sort, $direction);
+        ], (int) $requested, 50, $sort, $direction, [
+            ['column' => $secondary[0], 'direction' => $secondary[1]],
+            ['column' => $tertiary[0], 'direction' => $tertiary[1]],
+        ]);
         $this->filtered = $page['all'];
         $this->visible = $page['rows'];
         $this->page = $page['page'];

@@ -178,6 +178,30 @@ $reportModel = App\Models\Common\Report::query()
     ->where('company_id', $company1)
     ->where('class', AuditInconsistencies::class)
     ->firstOrFail();
+// The native report editor must offer the same three persisted sort levels
+// used by the member capital report, without changing the underlying ledger.
+$fieldsByName = static fn (AuditInconsistencies $instance): array =>
+    array_column($instance->getFields(), null, 'name');
+$defaultFields = $fieldsByName(new AuditInconsistencies($reportModel, false));
+requireCondition($defaultFields['default_sort']['selected'] === 'severity'
+    && $defaultFields['default_direction']['selected'] === 'asc'
+    && $defaultFields['secondary_sort']['selected'] === 'competence'
+    && $defaultFields['secondary_direction']['selected'] === 'desc'
+    && $defaultFields['tertiary_sort']['selected'] === 'rule'
+    && $defaultFields['tertiary_direction']['selected'] === 'asc',
+    'Audit editor default sorting preferences are incorrect.');
+$configuredModel = clone $reportModel;
+$configuredModel->settings = (object) [
+    'default_sort' => 'source', 'default_direction' => 'desc',
+    'secondary_sort' => 'competence', 'secondary_direction' => 'desc',
+    'tertiary_sort' => 'rule', 'tertiary_direction' => 'asc',
+];
+$configuredFields = $fieldsByName(new AuditInconsistencies($configuredModel, false));
+requireCondition($configuredFields['default_sort']['selected'] === 'source'
+    && $configuredFields['default_direction']['selected'] === 'desc'
+    && count($configuredFields['default_sort']['values']) === count(\\Modules\\AkauntingReports\\Support\\Audit\\FindingPage::SORT_COLUMNS),
+    'Saved audit preferences were not reflected in Akaunting edit fields.');
+
 $report = new AuditInconsistencies($reportModel, false);
 $report->setViews();
 $report->setData();
