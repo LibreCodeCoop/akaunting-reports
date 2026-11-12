@@ -57,6 +57,8 @@ return [
     'truncated' => 'The scan limit was reached. Results are partial; do not interpret zero findings as a clean audit.',
     'preview_truncated' => 'Partial preview: open the report for a wider scan.',
     'interpretation' => 'An alert is a review signal, not proof of an accounting or tax violation. Verify the original document, payments, currency and any authorized fiscal evidence.',
+    'sort' => 'Sort by',
+    'open_source' => 'Open source document',
     'table_title' => 'Financial audit occurrences',
     'no_findings' => 'No findings for the current filters; this does not certify the books.',
     'read_only' => 'Read only: no transactions, documents, payment statuses or taxes were changed.',

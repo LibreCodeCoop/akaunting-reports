@@ -58,6 +58,8 @@ return [
     'truncated' => 'O limite de varredura foi atingido. O resultado é parcial; zero alertas não significa auditoria concluída.',
     'preview_truncated' => 'Prévia parcial: abra o relatório para ampliar a verificação.',
     'interpretation' => 'Um alerta indica necessidade de revisão, não comprova erro contábil ou fiscal. Confira o documento original, pagamentos, moeda e evidência fiscal autorizada.',
+    'sort' => 'Ordenar por',
+    'open_source' => 'Abrir documento de origem',
     'table_title' => 'Ocorrências da auditoria financeira',
     'no_findings' => 'Nenhum alerta nos filtros atuais; isso não certifica a contabilidade.',
     'read_only' => 'Somente leitura: nenhuma transação, documento, pagamento ou imposto foi alterado.',
