@@ -8,18 +8,27 @@ namespace Modules\AkauntingReports\Support\Audit;
 
 use InvalidArgumentException;
 
-/** Deterministic pagination over findings from a bounded read-only scan. */
+/** Deterministic sorting and pagination over findings from a bounded read-only scan. */
 final class FindingPage
 {
+    public const SORT_COLUMNS = ['severity', 'classification', 'rule', 'source', 'competence', 'guidance'];
+
     /**
      * @param list<Occurrence> $findings
      * @param array{classification?:string,severity?:string,source?:string,rule?:string,year?:string} $filters
      * @return array{all:list<Occurrence>,rows:list<Occurrence>,total:int,page:int,pages:int,per_page:int}
      */
-    public static function select(array $findings, array $filters, int $page = 1, int $perPage = 50): array
+    public static function select(
+        array $findings, array $filters, int $page = 1, int $perPage = 50,
+        string $sort = 'severity', string $direction = 'asc'
+    ): array
     {
         if ($page < 1 || $page > 10000 || $perPage < 1 || $perPage > 100) {
             throw new InvalidArgumentException('Invalid audit pagination.');
+        }
+        if (!in_array($sort, self::SORT_COLUMNS, true)
+            || !in_array($direction, ['asc', 'desc'], true)) {
+            throw new InvalidArgumentException('Unsupported audit sort.');
         }
         $filtered = [];
         foreach ($findings as $finding) {
@@ -49,8 +58,17 @@ final class FindingPage
             $filtered[] = $finding;
         }
         $severity = ['critical' => 0, 'warning' => 1, 'info' => 2];
-        usort($filtered, static function (Occurrence $a, Occurrence $b) use ($severity): int {
-            return ($severity[$a->severity] <=> $severity[$b->severity])
+        $assessment = ['confirmed' => 0, 'suspected' => 1, 'insufficient' => 2];
+        usort($filtered, static function (Occurrence $a, Occurrence $b) use ($severity, $assessment, $sort, $direction): int {
+            $order = match ($sort) {
+                'severity' => $severity[$a->severity] <=> $severity[$b->severity],
+                'classification' => $assessment[$a->classification] <=> $assessment[$b->classification],
+                'rule' => strcmp($a->caseKey, $b->caseKey),
+                'source' => strcmp($a->source, $b->source) ?: strnatcmp($a->sourceId, $b->sourceId),
+                'competence' => strcmp((string) $a->competence, (string) $b->competence),
+                'guidance' => strcmp($a->guidanceKey, $b->guidanceKey),
+            };
+            return ($direction === 'desc' ? -$order : $order)
                 ?: strcmp((string) $b->competence, (string) $a->competence)
                 ?: strcmp($a->id(), $b->id());
         });

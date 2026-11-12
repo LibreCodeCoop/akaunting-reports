@@ -63,6 +63,7 @@ return [
     'read_only' => 'Somente leitura: nenhuma transação, documento, pagamento ou imposto foi alterado.',
     'export_filename' => 'auditoria-financeira',
     'invalid_filter' => 'Filtro de auditoria inválido.',
+    'invalid_sort' => 'Ordenação de auditoria inválida.',
     'review_source' => 'Confira o registro original e corrija apenas pelo fluxo contábil normal.',
     'check_source_availability' => 'Confira se a fonte opcional está configurada e acessível.',
     'paid_without_payment' => 'Status pago sem pagamento vinculado',

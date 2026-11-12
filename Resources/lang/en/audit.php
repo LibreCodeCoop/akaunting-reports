@@ -62,6 +62,7 @@ return [
     'read_only' => 'Read only: no transactions, documents, payment statuses or taxes were changed.',
     'export_filename' => 'financial-audit-findings',
     'invalid_filter' => 'Unsupported audit filter.',
+    'invalid_sort' => 'Unsupported audit sort.',
     'review_source' => 'Examine the authorized source record; correct it only through the normal accounting workflow.',
     'check_source_availability' => 'Verify whether the optional source is configured and accessible.',
     'paid_without_payment' => 'Paid status without a linked payment',

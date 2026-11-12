@@ -137,13 +137,19 @@ final class AuditInconsistencies extends Report
         if (!is_scalar($requested) || !preg_match('/^[1-9][0-9]{0,3}$/D', (string) $requested)) {
             abort(422, trans('akaunting-reports::audit.invalid_page'));
         }
+        $sort = request()->query('sort', 'severity');
+        $direction = request()->query('direction', 'asc');
+        if (!is_string($sort) || !in_array($sort, FindingPage::SORT_COLUMNS, true)
+            || !is_string($direction) || !in_array($direction, ['asc', 'desc'], true)) {
+            abort(422, trans('akaunting-reports::audit.invalid_sort'));
+        }
         $page = FindingPage::select($this->findings, [
             'classification' => $this->selectedClassification,
             'severity' => $this->selectedSeverity,
             'source' => $this->selectedSource,
             'rule' => $this->selectedRule,
             'year' => $this->selectedYear,
-        ], (int) $requested);
+        ], (int) $requested, 50, $sort, $direction);
         $this->filtered = $page['all'];
         $this->visible = $page['rows'];
         $this->page = $page['page'];
