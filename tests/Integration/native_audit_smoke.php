@@ -160,6 +160,29 @@ $widgetHtml = $widget->show()->render();
 requireCondition(str_contains($widgetHtml, 'By reference month'),
     'Akaunting dashboard widget failed to render its period summary.');
 
+// Render actual native Blade content with Akaunting's stylesheet.
+// All data in this isolated preview are synthetic.
+$cssPath = $appDirectory . '/public/css/app.css';
+$css = is_file($cssPath) ? file_get_contents($cssPath) : false;
+requireCondition(is_string($css) && $css !== '', 'Native Akaunting CSS unavailable.');
+$preview = static function (string $heading, string $body) use ($css): string {
+    $label = htmlspecialchars($heading, ENT_QUOTES, 'UTF-8');
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        . '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        . '<title>' . $label . '</title><style>' . $css . '</style>'
+        . '<style>body{background:#f3f5f9;padding:28px;font-family:sans-serif;}'
+        . '.audit-shell{max-width:1250px;margin:0 auto;background:white;'
+        . 'border:1px solid #dbe2ee;border-radius:12px;padding:24px;}'
+        . '.audit-label{font-size:13px;color:#64748b;border-bottom:1px solid #dbe2ee;'
+        . 'padding-bottom:12px;margin-bottom:20px;}</style></head><body>'
+        . '<main class="audit-shell"><div class="audit-label">'
+        . $label . ' | SYNTHETIC DATA | Akaunting 3.3.0</div>'
+        . $body . '</main></body></html>';
+};
+requireCondition(file_put_contents('/tmp/audit-report-preview.html',
+    $preview('Financial audit report', $html)) !== false, 'No report preview.');
+requireCondition(file_put_contents('/tmp/audit-widget-preview.html',
+    $preview('Financial audit widget', $widgetHtml)) !== false, 'No widget preview.');
 requireCondition($before === $ledger(), 'Audit changed an accounting document or transaction.');
 
 Auth::logout();
