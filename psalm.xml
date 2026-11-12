@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors -->
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<psalm errorLevel="5"
+       findUnusedCode="false"
+       phpVersion="8.3"
+       resolveFromConfigFile="true"
+       xmlns="https://getpsalm.org/schema/config">
+    <stubs><file name="tests/stubs/framework.php" /></stubs>
+    <projectFiles>
+        <directory name="Support"/>
+        <ignoreFiles>
+            <file name="Support/CapitalSocialLedger.php"/>
+            <file name="Support/FrraAnnualLedger.php"/>
+        </ignoreFiles>
+    </projectFiles>
+</psalm>

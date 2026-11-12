@@ -1,0 +1,14 @@
+{
+    "name": "librecodecoop/akaunting-reports-psalm",
+    "description": "Isolated Psalm tooling for Akaunting Reports",
+    "type": "project",
+    "require-dev": {
+        "vimeo/psalm": "^6.0"
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.3.36"
+        }
+    }
+}
