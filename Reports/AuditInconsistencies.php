@@ -9,6 +9,7 @@ namespace Modules\AkauntingReports\Reports;
 use App\Abstracts\Report;
 use App\Utilities\Reports;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Modules\AkauntingReports\Support\Audit\Occurrence;
 use Modules\AkauntingReports\Support\Audit\FindingPage;
 use Modules\AkauntingReports\Support\Audit\ReadOnlyAuditService;
@@ -137,13 +138,19 @@ final class AuditInconsistencies extends Report
         if (!is_scalar($requested) || !preg_match('/^[1-9][0-9]{0,3}$/D', (string) $requested)) {
             abort(422, trans('akaunting-reports::audit.invalid_page'));
         }
+        $sort = request()->query('sort', 'severity');
+        $direction = request()->query('direction', 'asc');
+        if (!is_string($sort) || !in_array($sort, FindingPage::SORT_COLUMNS, true)
+            || !is_string($direction) || !in_array($direction, ['asc', 'desc'], true)) {
+            abort(422, trans('akaunting-reports::audit.invalid_sort'));
+        }
         $page = FindingPage::select($this->findings, [
             'classification' => $this->selectedClassification,
             'severity' => $this->selectedSeverity,
             'source' => $this->selectedSource,
             'rule' => $this->selectedRule,
             'year' => $this->selectedYear,
-        ], (int) $requested);
+        ], (int) $requested, 50, $sort, $direction);
         $this->filtered = $page['all'];
         $this->visible = $page['rows'];
         $this->page = $page['page'];
@@ -174,36 +181,58 @@ final class AuditInconsistencies extends Report
         ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 
+    /**
+     * Resolve an authorized native accounting record, never a fiscal route.
+     * A fiscal receipt belongs to an invoice; the invoice page owns the NFS-e link.
+     */
     public function sourceUrl(Occurrence $occurrence): ?string
     {
-        if ($occurrence->companyId !== (int) company_id() || !ctype_digit($occurrence->sourceId)) {
+        if ($occurrence->companyId !== (int) company_id()
+            || !ctype_digit($occurrence->sourceId) || (int) $occurrence->sourceId <= 0) {
             return null;
         }
+        $sourceId = (int) $occurrence->sourceId;
+
+        if ($occurrence->source === 'fiscal_receipt') {
+            if (!user()->can('read-sales-invoices') || !Route::has('invoices.show')
+                || !Schema::hasTable('nfse_receipts')) {
+                return null;
+            }
+            // The fiscal table has no company ID: validate the linked accounting invoice.
+            $invoiceId = \Illuminate\Support\Facades\DB::table('nfse_receipts as f')
+                ->join('documents as d', 'd.id', '=', 'f.invoice_id')
+                ->where('f.id', $sourceId)
+                ->where('d.company_id', $occurrence->companyId)
+                ->where('d.type', 'invoice')
+                ->whereNull('d.deleted_at')
+                ->value('d.id');
+            return $invoiceId !== null ? route('invoices.show', (int) $invoiceId) : null;
+        }
+
         if ($occurrence->source === 'document') {
-            // Permission for the report does not imply permission for invoice/bill details.
             $type = \Illuminate\Support\Facades\DB::table('documents')
                 ->where('company_id', $occurrence->companyId)
                 ->whereNull('deleted_at')
-                ->where('id', (int) $occurrence->sourceId)->value('type');
+                ->where('id', $sourceId)->value('type');
             $route = match ($type) {
-                'invoice' => 'sales.invoices.show',
-                'bill' => 'purchases.bills.show',
+                'invoice' => 'invoices.show',
+                'bill' => 'bills.show',
                 default => null,
             };
             $permission = $type === 'invoice' ? 'read-sales-invoices' : 'read-purchases-bills';
             if ($route !== null && user()->can($permission) && Route::has($route)) {
-                return route($route, $occurrence->sourceId);
+                return route($route, $sourceId);
             }
         }
         if ($occurrence->source === 'transaction'
             && user()->can('read-banking-transactions')
-            && Route::has('banking.transactions.show')) {
+            && Route::has('transactions.show')) {
             $exists = \Illuminate\Support\Facades\DB::table('transactions')
                 ->where('company_id', $occurrence->companyId)
                 ->whereNull('deleted_at')
-                ->where('id', (int) $occurrence->sourceId)->exists();
+                ->where('id', $sourceId)->exists();
             if ($exists) {
-                return route('banking.transactions.show', $occurrence->sourceId);
+                return route('transactions.show', $sourceId);
             }
         }
         return null;

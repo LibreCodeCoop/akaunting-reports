@@ -64,4 +64,52 @@ final class FindingPageTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         FindingPage::select([], [], 0);
     }
+
+    public function testColumnSortingIsAppliedBeforePagination(): void
+    {
+        $items = [
+            self::item(10, 'warning', '2026-11'),
+            self::item(2, 'warning', '2026-10'),
+            self::item(3, 'critical', '2026-09'),
+        ];
+        $first = FindingPage::select($items, [], 1, 2, 'source', 'asc');
+        $second = FindingPage::select(array_reverse($items), [], 2, 2, 'source', 'asc');
+        self::assertSame(['2', '3'], array_map(static fn ($item) => $item->sourceId, $first['rows']));
+        self::assertSame(['10'], array_map(static fn ($item) => $item->sourceId, $second['rows']));
+
+        $recent = FindingPage::select($items, [], 1, 3, 'competence', 'desc');
+        self::assertSame(['10', '2', '3'],
+            array_map(static fn ($item) => $item->sourceId, $recent['rows']));
+        $critical = FindingPage::select($items, [], 1, 3);
+        self::assertSame('3', $critical['rows'][0]->sourceId);
+    }
+
+    public function testAllColumnsAndDirectionsHaveStableOrder(): void
+    {
+        $items = [self::item(3, 'info', '2025-01'), self::item(1, 'warning', '2026-01'),
+            self::item(2, 'critical', '2026-11')];
+        foreach (FindingPage::SORT_COLUMNS as $column) {
+            foreach (['asc', 'desc'] as $direction) {
+                $first = FindingPage::select($items, [], 1, 50, $column, $direction);
+                $again = FindingPage::select(array_reverse($items), [], 1, 50, $column, $direction);
+                self::assertSame(
+                    array_map(static fn ($item) => $item->id(), $first['all']),
+                    array_map(static fn ($item) => $item->id(), $again['all']),
+                    $column . ':' . $direction
+                );
+            }
+        }
+    }
+
+    public function testRejectsUnrecognizedSortColumns(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        FindingPage::select([], [], 1, 50, 'company_id', 'asc');
+    }
+
+    public function testRejectsInvalidSortDirection(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        FindingPage::select([], [], 1, 50, 'severity', 'down');
+    }
 }

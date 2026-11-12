@@ -18,8 +18,12 @@ corrected or cancelled. Additional viewers require an explicit native ACL grant.
 The dashboard widget also checks the **report's read permission**.
 
 Filters: assessment, severity, source, rule and reference year. Page size is
-50 findings, sorted deterministically by severity, descending reference month
-and stable occurrence ID; navigation never relies on offset-based SQL scans.
+50 findings, sorted deterministically by the selected native table column
+(default: severity), then reference month and stable occurrence ID. Sorting
+is applied before pagination and preserved in pagination links; navigation
+never relies on offset-based SQL scans. Fiscal findings link to the validated
+native invoice (not directly to a receipt), subject to invoice permission,
+company isolation and existence of the optional fiscal table.
 CSV and PDF export use all filtered findings, not just the visible page. Export: CSV using machine-readable
 identifiers, integer-cent evidence and deterministic occurrence IDs.
 The native print and PDF paths use a separate printable view. The dashboard

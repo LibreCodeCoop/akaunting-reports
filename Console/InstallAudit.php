@@ -11,6 +11,7 @@ use App\Utilities\Reports;
 use App\Utilities\Widgets;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Lang;
 use Modules\AkauntingReports\Reports\AuditInconsistencies;
 use Modules\AkauntingReports\Widgets\AuditInconsistencies as AuditWidget;
 
@@ -44,19 +45,55 @@ final class InstallAudit extends Command
             return self::SUCCESS;
         }
 
-        DB::transaction(static function () use ($companyId): void {
-            if (!DB::table('reports')->where('company_id', $companyId)
-                ->where('class', AuditInconsistencies::class)->whereNull('deleted_at')->exists()) {
+        // Use the company locale rather than the CLI process locale.
+        $locale = (string) (DB::table('settings')->where('company_id', $companyId)
+            ->where('key', 'default.locale')->value('value') ?: 'en-GB');
+        if (!in_array($locale, ['pt-BR', 'en-GB', 'en'], true)) {
+            $locale = 'en-GB';
+        }
+        $name = Lang::get('akaunting-reports::audit.title', [], $locale);
+        $description = Lang::get('akaunting-reports::audit.description', [], $locale);
+
+        DB::transaction(static function () use ($companyId, $name, $description): void {
+            $query = DB::table('reports')->where('company_id', $companyId)
+                ->where('class', AuditInconsistencies::class)->whereNull('deleted_at');
+            $existing = $query->first(['id', 'name', 'description']);
+            if ($existing === null) {
                 DB::table('reports')->insert([
                     'company_id' => $companyId,
                     'class' => AuditInconsistencies::class,
-                    'name' => trans('akaunting-reports::audit.title'),
-                    'description' => trans('akaunting-reports::audit.description'),
+                    'name' => $name,
+                    'description' => $description,
                     'settings' => json_encode(['classification' => 'all'], JSON_THROW_ON_ERROR),
                     'created_from' => 'akaunting-reports::install',
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+                return;
+            }
+
+            // Do not overwrite a report label customized by an operator.
+            $generatedNames = [
+                'Financial Inconsistency Audit', 'Financial inconsistency audit',
+                'Auditoria de Inconsistências Financeiras',
+                'Auditoria de inconsistências financeiras',
+            ];
+            $generatedDescriptions = [
+                'Source-linked review findings; no accounting records are changed.',
+                'Alertas vinculados aos registros de origem; nenhum lançamento é alterado.',
+            ];
+            $updates = [];
+            if (in_array((string) $existing->name, $generatedNames, true)
+                && (string) $existing->name !== $name) {
+                $updates['name'] = $name;
+            }
+            if (in_array((string) $existing->description, $generatedDescriptions, true)
+                && (string) $existing->description !== $description) {
+                $updates['description'] = $description;
+            }
+            if ($updates !== []) {
+                DB::table('reports')->where('company_id', $companyId)->where('id', $existing->id)
+                    ->update([...$updates, 'updated_at' => now()]);
             }
         });
 
