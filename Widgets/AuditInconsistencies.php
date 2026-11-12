@@ -9,6 +9,7 @@ namespace Modules\AkauntingReports\Widgets;
 use App\Abstracts\Widget;
 use App\Utilities\Reports;
 use App\Utilities\Widgets;
+use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Reports\AuditInconsistencies as Report;
 use Modules\AkauntingReports\Support\Audit\ReadOnlyAuditService;
 
@@ -19,6 +20,24 @@ final class AuditInconsistencies extends Widget
     public $description = 'akaunting-reports::audit.widget_description';
     public $report_class = Report::class;
     public $default_settings = ['width' => '50'];
+
+    /** Link only to the audit report registered for the active company. */
+    public function getReportUrl(): string
+    {
+        $companyId = (int) company_id();
+        if ($companyId <= 0 || user() === null || Widgets::cannotRead(self::class)
+            || Reports::cannotRead(Report::class)) {
+            return '';
+        }
+
+        $reportId = DB::table('reports')
+            ->where('company_id', $companyId)
+            ->where('class', Report::class)
+            ->whereNull('deleted_at')
+            ->value('id');
+
+        return $reportId === null ? '' : route('reports.show', $reportId);
+    }
 
     public function show()
     {

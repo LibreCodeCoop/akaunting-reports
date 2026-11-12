@@ -9,6 +9,8 @@ on:
       - 'Support/Audit/**'
       - 'Reports/AuditInconsistencies.php'
       - 'Widgets/AuditInconsistencies.php'
+      - 'Widgets/CapitalSocial.php'
+      - 'Resources/views/widgets/**'
       - 'Console/InstallAudit.php'
       - 'tests/Integration/**'
       - 'module.json'
@@ -107,9 +109,13 @@ jobs:
           "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
             --hide-scrollbars --window-size=1050,700 \
             --screenshot=/tmp/audit-widget.png file:///tmp/audit-widget-preview.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --hide-scrollbars --window-size=1050,700 \
+            --screenshot=/tmp/capital-widget.png file:///tmp/capital-widget-preview.html
           test -s /tmp/audit-report.png
           test -s /tmp/audit-widget.png
-          file /tmp/audit-report.png /tmp/audit-widget.png
+          test -s /tmp/capital-widget.png
+          file /tmp/audit-report.png /tmp/audit-widget.png /tmp/capital-widget.png
       - name: Upload synthetic screenshot evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -117,5 +123,6 @@ jobs:
           path: |
             /tmp/audit-report.png
             /tmp/audit-widget.png
+            /tmp/capital-widget.png
           if-no-files-found: error
           retention-days: 30
