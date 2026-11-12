@@ -28,7 +28,7 @@ final class FindingPageTest extends TestCase
         $third = FindingPage::select($items, [], 3, 3);
         self::assertSame(8, $first['total']);
         self::assertSame(3, $first['pages']);
-        self::assertSame(3, $first['rows'][0]->sourceId);
+        self::assertSame('3', $first['rows'][0]->sourceId);
 
         $ids = array_merge(
             array_map(static fn ($a) => $a->id(), $first['rows']),
