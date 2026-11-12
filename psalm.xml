@@ -15,6 +15,7 @@
             <file name="Support/Audit/FiscalReceiptReader.php"/>
             <file name="Support/Audit/FrraIntegrityReader.php"/>
             <file name="Support/Audit/CapitalIntegrityReader.php"/>
+            <file name="Support/Audit/ReadOnlyAuditService.php"/>
         </ignoreFiles>
     </projectFiles>
 </psalm>
