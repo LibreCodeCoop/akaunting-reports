@@ -119,10 +119,17 @@ $report = new AuditInconsistencies($reportModel, false);
 $report->setViews();
 $report->setData();
 $html = view('akaunting-reports::reports.audit.content', ['class' => $report])->render();
-requireCondition(str_contains($html, 'Draft document with a linked payment'),
-    'Akaunting native audit content failed to render its finding.');
-requireCondition(str_contains($html, 'Document category'),
-    'Akaunting native audit content failed to render category findings.');
+$visibleCases = array_map(static fn ($f): string => $f->caseKey, $report->visible);
+requireCondition(in_array('draft_with_payment', $visibleCases, true),
+    'Report filters discarded the draft/payment case.');
+requireCondition(in_array('category_opposite_direction', $visibleCases, true),
+    'Report filters discarded the category case.');
+requireCondition(str_contains($html, 'document_settlement')
+    && str_contains($html, 'category_integrity'),
+    'Akaunting native audit content did not render source-linked rule identifiers.');
+requireCondition(trans('akaunting-reports::audit.draft_with_payment')
+    !== 'akaunting-reports::audit.draft_with_payment',
+    'Native audit translations were not loaded.');
 $print = $report->print()->render();
 requireCondition(str_contains($print, 'Financial inconsistency audit'),
     'Akaunting print layout failed to render.');
