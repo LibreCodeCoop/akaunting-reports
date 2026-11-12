@@ -4,45 +4,45 @@
     <x-slot name="title">{{ $class->model->name }}</x-slot>
     <x-slot name="content">
         <h2>{{ $class->model->name }}</h2>
-        <p>{{ setting('company.name') }} · Posição em {{ company_date($class->asOf) }}</p>
+        <p>{{ setting('company.name') }} · {{ trans('akaunting-reports::ui.as_of_heading') }} {{ company_date($class->asOf) }}</p>
         @if ($class->configurationError)
             <p>{{ $class->configurationError }}</p>
         @else
             <p>
-                <strong>Saldo confirmado:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->capitalSummary['total_cents']) }} ·
-                <strong>Integralização direta:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->capitalSummary['direct_cents']) }} ·
-                <strong>Retenções:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->capitalSummary['retained_cents']) }} ·
-                <strong>Devoluções:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->capitalSummary['devolvido_cents']) }}
+                <strong>{{ trans('akaunting-reports::ui.confirmed_balance_colon') }}</strong>
+                {{ money(($class->capitalSummary['total_cents']) / 100, default_currency(), true) }} ·
+                <strong>{{ trans('akaunting-reports::ui.direct_contribution_colon') }}</strong>
+                {{ money(($class->capitalSummary['direct_cents']) / 100, default_currency(), true) }} ·
+                <strong>{{ trans('akaunting-reports::ui.withholdings_colon') }}</strong>
+                {{ money(($class->capitalSummary['retained_cents']) / 100, default_currency(), true) }} ·
+                <strong>{{ trans('akaunting-reports::ui.refunds_colon') }}</strong>
+                {{ money(($class->capitalSummary['devolvido_cents']) / 100, default_currency(), true) }}
             </p>
-            <p>{{ $class->capitalSummary['confirmed_count'] }} movimentações confirmadas,
-                {{ $class->capitalSummary['pending_count'] }} pendentes (não contabilizadas).
+            <p>{{ $class->capitalSummary['confirmed_count'] }} {{ trans('akaunting-reports::ui.confirmed_movements') }},
+                {{ $class->capitalSummary['pending_count'] }} {{ trans('akaunting-reports::ui.pending_not_accounted') }}
             </p>
 
             @if ($class->tab === 'overview')
-                <h3>Posição por cooperado</h3>
+                <h3>{{ trans('akaunting-reports::ui.position_by_member') }}</h3>
                 <table class="w-full">
                     <thead>
-                        <tr><th>Cooperado</th><th>Direto</th><th>Retido</th><th>Devolvido</th><th>Saldo</th><th>Última integralização</th><th>Pendências</th><th>Situação</th></tr>
+                        <tr><th>{{ trans('akaunting-reports::ui.member') }}</th><th>{{ trans('akaunting-reports::ui.direct_short') }}</th><th>{{ trans('akaunting-reports::ui.retained') }}</th><th>{{ trans('akaunting-reports::ui.refund_returned') }}</th><th>{{ trans('akaunting-reports::ui.balance') }}</th><th>{{ trans('akaunting-reports::ui.last_contribution') }}</th><th>{{ trans('akaunting-reports::ui.pending') }}</th><th>{{ trans('akaunting-reports::ui.status') }}</th></tr>
                     </thead>
                     <tbody>
                         @foreach ($class->sortedMembers as $member)
                             <tr>
                                 <td>{{ $member['name'] }}</td>
-                                <td>{{ \Modules\AkauntingReports\Support\Money::format($member['direct_cents']) }}</td>
-                                <td>{{ \Modules\AkauntingReports\Support\Money::format($member['retained_cents']) }}</td>
-                                <td>{{ \Modules\AkauntingReports\Support\Money::format($member['devolvido_cents']) }}</td>
-                                <td>{{ \Modules\AkauntingReports\Support\Money::format($member['saldo_cents']) }}</td>
+                                <td>{{ money(($member['direct_cents']) / 100, default_currency(), true) }}</td>
+                                <td>{{ money(($member['retained_cents']) / 100, default_currency(), true) }}</td>
+                                <td>{{ money(($member['devolvido_cents']) / 100, default_currency(), true) }}</td>
+                                <td>{{ money(($member['saldo_cents']) / 100, default_currency(), true) }}</td>
                                 <td>{{ $member['last_contribution_date'] !== null ? company_date($member['last_contribution_date']) : '—' }}</td>
-                                <td>{{ $member['pending'] }} não confirmadas; {{ $member['warnings'] }} ressalvas</td>
+                                <td>{{ $member['pending'] }} {{ trans('akaunting-reports::ui.not_confirmed_plural') }}; {{ $member['warnings'] }} {{ trans('akaunting-reports::ui.reservation_count') }}</td>
                                 <td>
                                     @forelse ($member['status_labels'] as $label => $total)
                                         {{ $label }} ({{ $total }})@if (!$loop->last); @endif
                                     @empty
-                                        Sem ocorrências
+                                        {{ trans('akaunting-reports::ui.no_occurrences') }}
                                     @endforelse
                                 </td>
                             </tr>
@@ -50,12 +50,12 @@
                     </tbody>
                 </table>
             @else
-                <h3>Extrato de movimentações</h3>
+                <h3>{{ trans('akaunting-reports::ui.movement_ledger') }}</h3>
                 <table class="w-full">
                     <thead>
                         <tr>
-                            <th>Data</th><th>Cooperado</th><th>Movimentação</th><th>Valor</th><th>Situação</th><th>Origem</th>
-                            @if ($class->selectedMember !== null) <th>Saldo individual</th> @endif
+                            <th>{{ trans('akaunting-reports::ui.date') }}</th><th>{{ trans('akaunting-reports::ui.member') }}</th><th>{{ trans('akaunting-reports::ui.movement') }}</th><th>{{ trans('akaunting-reports::ui.value') }}</th><th>{{ trans('akaunting-reports::ui.status') }}</th><th>{{ trans('akaunting-reports::ui.source') }}</th>
+                            @if ($class->selectedMember !== null) <th>{{ trans('akaunting-reports::ui.individual_balance') }}</th> @endif
                         </tr>
                     </thead>
                     <tbody>
@@ -63,19 +63,19 @@
                             <tr>
                                 <td>{{ company_date($row['date']) }}</td>
                                 <td>{{ $row['name'] }}</td>
-                                <td>{{ $row['kind'] }}</td>
+                                <td>{{ trans('akaunting-reports::ui.kind_' . $row['kind']) }}</td>
                                 <td>
-                                    {{ \Modules\AkauntingReports\Support\Money::format($row['amount_cents']) }}
+                                    {{ money(($row['amount_cents']) / 100, default_currency(), true) }}
                                     @if ($row['status'] === 'revisar' && $row['candidate_cents'] > 0)
-                                        ({{ \Modules\AkauntingReports\Support\Money::format($row['candidate_cents']) }} em análise)
+                                        ({{ money(($row['candidate_cents']) / 100, default_currency(), true) }} {{ trans('akaunting-reports::ui.pending_in_review') }})
                                     @endif
                                 </td>
                                 <td>{{ \Modules\AkauntingReports\Support\CapitalSocialReview::label($row) }}</td>
-                                <td>{{ $row['source'] === 'document' ? 'Documento' : 'Transação' }} #{{ $row['id'] }}
-                                    @if ($row['reason'] !== '') — {{ $row['reason'] }} @endif
+                                <td>{{ trans('akaunting-reports::ui.source_' . $row['source']) }} #{{ $row['id'] }}
+                                    @if ($row['reason'] !== '') — {{ \Modules\AkauntingReports\Support\CapitalSocialReview::reason((string) $row['reason']) }} @endif
                                 </td>
                                 @if ($class->selectedMember !== null)
-                                    <td>{{ \Modules\AkauntingReports\Support\Money::format($row['running_balance_cents']) }}</td>
+                                    <td>{{ money(($row['running_balance_cents']) / 100, default_currency(), true) }}</td>
                                 @endif
                             </tr>
                         @endforeach

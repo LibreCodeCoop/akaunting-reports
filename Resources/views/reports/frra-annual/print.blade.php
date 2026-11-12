@@ -4,32 +4,31 @@
     <x-slot name="title">{{ $class->model->name }} · {{ $class->selectedYear }}</x-slot>
     <x-slot name="content">
         <h2>{{ $class->model->name }} · {{ $class->selectedYear }}</h2>
-        <p>FRRA por competência mensal e por cooperado; valores registrados não representam necessariamente pagamentos.</p>
+        <p>{{ trans('akaunting-reports::ui.frra_print_intro') }}</p>
         @if ($class->configurationError)
             <p>{{ $class->configurationError }}</p>
         @else
             <p>
-                <strong>Total registrado:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->summary['total_cents']) }} ·
-                <strong>Retido na produção:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->summary['production_cents']) }} ·
-                <strong>Complemento anual:</strong>
-                R$ {{ \Modules\AkauntingReports\Support\Money::format($class->summary['annual_cents']) }}
+                <strong>{{ trans('akaunting-reports::ui.total_registered') }}</strong>
+                {{ money(($class->summary['total_cents']) / 100, default_currency(), true) }} ·
+                <strong>{{ trans('akaunting-reports::ui.retained_production_colon') }}</strong>
+                {{ money(($class->summary['production_cents']) / 100, default_currency(), true) }} ·
+                <strong>{{ trans('akaunting-reports::ui.annual_supplement_colon') }}</strong>
+                {{ money(($class->summary['annual_cents']) / 100, default_currency(), true) }}
             </p>
             @if (($class->issues['unallocated_by_year'][$class->selectedYear]['items'] ?? 0) > 0)
-                <p><strong>Atenção: histórico incompleto.</strong>
-                    {{ $class->issues['unallocated_by_year'][$class->selectedYear]['items'] }} itens
-                    com competências ambíguas, no valor de
-                    R$ {{ \Modules\AkauntingReports\Support\Money::format(
-                        $class->issues['unallocated_by_year'][$class->selectedYear]['cents']) }},
-                    não foram distribuídos nos meses nem adicionados aos totais.</p>
+                <p><strong>{{ trans('akaunting-reports::ui.year_incomplete_print') }}</strong>
+                    {{ $class->issues['unallocated_by_year'][$class->selectedYear]['items'] }} {{ trans('akaunting-reports::ui.items') }}
+                    {{ trans('akaunting-reports::ui.frra_unallocated_print') }}
+                    {{ money(($class->issues['unallocated_by_year'][$class->selectedYear]['cents']) / 100, default_currency(), true) }},
+                    {{ trans('akaunting-reports::ui.frra_unallocated_tail') }}</p>
             @endif
             <table class="w-full">
                 <thead>
                     <tr>
-                        <th>Cooperado</th>
-                        <th>Jan – Mar</th><th>Abr – Jun</th><th>Jul – Set</th><th>Out – Dez</th>
-                        <th>Total</th>
+                        <th>{{ trans('akaunting-reports::ui.member') }}</th>
+                        <th>{{ trans('akaunting-reports::ui.months.1') }} – {{ trans('akaunting-reports::ui.months.3') }}</th><th>{{ trans('akaunting-reports::ui.months.4') }} – {{ trans('akaunting-reports::ui.months.6') }}</th><th>{{ trans('akaunting-reports::ui.months.7') }} – {{ trans('akaunting-reports::ui.months.9') }}</th><th>{{ trans('akaunting-reports::ui.months.10') }} – {{ trans('akaunting-reports::ui.months.12') }}</th>
+                        <th>{{ trans('akaunting-reports::ui.total') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -39,9 +38,9 @@
                             @foreach (range(0, 3) as $quarter)
                                 <td>
                                     @foreach (range($quarter * 3 + 1, $quarter * 3 + 3) as $month)
-                                        <div>{{ $class->monthNames[$month] }}:
+                                        <div>{{ trans('akaunting-reports::ui.months.' . $month) }}:
                                             @if ($member['counts'][$month] > 0)
-                                                {{ \Modules\AkauntingReports\Support\Money::format($member['months'][$month]) }}
+                                                {{ money(($member['months'][$month]) / 100, default_currency(), true) }}
                                                 @if ($member['sources'][$month] === 'annual') † @endif
                                             @else
                                                 —
@@ -50,25 +49,25 @@
                                     @endforeach
                                 </td>
                             @endforeach
-                            <td>{{ \Modules\AkauntingReports\Support\Money::format($member['total_cents']) }}</td>
+                            <td>{{ money(($member['total_cents']) / 100, default_currency(), true) }}</td>
                         </tr>
                     @endforeach
                     <tr>
-                        <th>TOTAL {{ $class->selectedYear }}</th>
+                        <th>{{ trans('akaunting-reports::ui.total') }} {{ $class->selectedYear }}</th>
                         @foreach (range(0, 3) as $quarter)
                             <th>
                                 @foreach (range($quarter * 3 + 1, $quarter * 3 + 3) as $month)
-                                    <div>{{ $class->monthNames[$month] }}:
-                                        {{ \Modules\AkauntingReports\Support\Money::format($class->summary['months'][$month]) }}</div>
+                                    <div>{{ trans('akaunting-reports::ui.months.' . $month) }}:
+                                        {{ money(($class->summary['months'][$month]) / 100, default_currency(), true) }}</div>
                                 @endforeach
                             </th>
                         @endforeach
-                        <th>{{ \Modules\AkauntingReports\Support\Money::format($class->summary['total_cents']) }}</th>
+                        <th>{{ money(($class->summary['total_cents']) / 100, default_currency(), true) }}</th>
                     </tr>
                 </tbody>
             </table>
-            <p>† = competência complementada apenas pela fatura anual de FRRA. Documentos em rascunho estão incluídos;
-                pagamentos realizados não são inferidos.</p>
+            <p>{{ trans('akaunting-reports::ui.frra_print_footer_1') }}
+                {{ trans('akaunting-reports::ui.frra_print_footer_2') }}</p>
         @endif
     </x-slot>
 </x-layouts.print>
