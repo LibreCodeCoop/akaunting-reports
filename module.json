@@ -11,9 +11,12 @@
   "requires": [],
   "reports": [
     "Modules\\AkauntingReports\\Reports\\CapitalSocial",
-    "Modules\\AkauntingReports\\Reports\\FrraAnnual"
+    "Modules\\AkauntingReports\\Reports\\FrraAnnual",
+    "Modules\\AkauntingReports\\Reports\\AuditInconsistencies"
   ],
-  "widgets": [],
+  "widgets": [
+    "Modules\\AkauntingReports\\Widgets\\AuditInconsistencies"
+  ],
   "settings": [],
   "extra-modules": {}
 }

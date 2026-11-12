@@ -4,5 +4,6 @@
 
 return [
     'capital_social' => 'Member Capital',
+    'audit_inconsistencies' => 'Financial Inconsistency Audit',
     'frra_annual' => 'Annual Member Reserve',
 ];

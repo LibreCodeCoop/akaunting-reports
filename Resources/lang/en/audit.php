@@ -29,7 +29,6 @@ return [
     'guidance' => 'Next step',
     'document' => 'Document',
     'fiscal_receipt' => 'NFS-e receipt',
-    'source_unavailable' => 'Unavailable source',
     'scanned' => 'Documents reviewed',
     'truncated' => 'The scan limit was reached. Results are partial; do not interpret zero findings as a clean audit.',
     'preview_truncated' => 'Partial preview: open the report for a wider scan.',

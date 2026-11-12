@@ -9,6 +9,7 @@ namespace Modules\AkauntingReports\Providers;
 use Illuminate\Support\ServiceProvider;
 use Modules\AkauntingReports\Console\InstallCapitalSocial;
 use Modules\AkauntingReports\Console\InstallFrra;
+use Modules\AkauntingReports\Console\InstallAudit;
 
 final class Main extends ServiceProvider
 {
@@ -18,7 +19,7 @@ final class Main extends ServiceProvider
         $this->loadTranslationsFrom(__DIR__ . '/../Resources/lang', 'akaunting-reports');
 
         if ($this->app->runningInConsole()) {
-            $this->commands([InstallCapitalSocial::class, InstallFrra::class]);
+            $this->commands([InstallCapitalSocial::class, InstallFrra::class, InstallAudit::class]);
         }
     }
 }

@@ -45,16 +45,19 @@ final class InstallAudit extends Command
         }
 
         DB::transaction(static function () use ($companyId): void {
-            DB::table('reports')->updateOrInsert(
-                ['company_id' => $companyId, 'class' => AuditInconsistencies::class],
-                [
+            if (!DB::table('reports')->where('company_id', $companyId)
+                ->where('class', AuditInconsistencies::class)->whereNull('deleted_at')->exists()) {
+                DB::table('reports')->insert([
+                    'company_id' => $companyId,
+                    'class' => AuditInconsistencies::class,
                     'name' => trans('akaunting-reports::audit.title'),
                     'description' => trans('akaunting-reports::audit.description'),
                     'settings' => json_encode(['classification' => 'all'], JSON_THROW_ON_ERROR),
                     'created_from' => 'akaunting-reports::install',
+                    'created_at' => now(),
                     'updated_at' => now(),
-                ]
-            );
+                ]);
+            }
         });
 
         $permissions = [
