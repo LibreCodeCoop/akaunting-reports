@@ -6,9 +6,6 @@
         "phpunit/phpunit": "^11.5"
     },
     "config": {
-        "sort-packages": true,
-        "platform": {
-            "php": "8.3.36"
-        }
+        "sort-packages": true
     }
 }

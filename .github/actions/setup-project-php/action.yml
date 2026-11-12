@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Setup project PHP
+description: Install the minimum supported PHP minor version declared in composer.json
+
+inputs:
+  extensions:
+    description: Additional extensions needed by the current job
+    required: false
+    default: ''
+
+runs:
+  using: composite
+  steps:
+    - name: Read PHP requirement from Composer
+      id: php
+      shell: bash
+      run: |
+        version="$(bash .github/scripts/php-version-from-composer.sh)"
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+      with:
+        php-version: ${{ steps.php.outputs.version }}
+        tools: composer
+        extensions: ${{ inputs.extensions }}
+        coverage: none
