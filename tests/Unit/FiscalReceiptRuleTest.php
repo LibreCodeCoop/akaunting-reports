@@ -59,6 +59,32 @@ final class FiscalReceiptRuleTest extends TestCase
             self::check('paid', 'emitted', '100.001')[0]->classification);
     }
 
+    public function testMultipleFiscalReceiptsReconcileAsOneInvoice(): void
+    {
+        $documents = [['company_id' => 1, 'id' => 4, 'type' => 'invoice',
+            'currency_code' => 'BRL', 'amount' => '100.00']];
+        $receipts = [
+            ['company_id' => 1, 'id' => 10, 'invoice_id' => 4, 'status' => 'emitted',
+                'snapshot_source' => 'authorized_xml', 'snapshot_hash_valid' => true,
+                'gross_service_value' => '40.00'],
+            ['company_id' => 1, 'id' => 11, 'invoice_id' => 4, 'status' => 'emitted',
+                'snapshot_source' => 'authorized_xml', 'snapshot_hash_valid' => true,
+                'gross_service_value' => '60.00'],
+        ];
+        $check = static fn (array $rows): array => Engine::evaluate(new Snapshot(1, 'BRL', [
+            'documents' => ['available' => true, 'rows' => $documents],
+            'fiscal_receipts' => ['available' => true, 'rows' => $rows],
+        ]), new Catalog([new FiscalReceiptRule()]));
+        self::assertSame([], $check($receipts));
+        $receipts[1]['gross_service_value'] = '60.01';
+        $result = $check(array_reverse($receipts));
+        self::assertCount(1, $result);
+        self::assertSame(Occurrence::SUSPECTED, $result[0]->classification);
+        self::assertSame(10001, $result[0]->evidence['fiscal_gross_cents']);
+        $receipts[0]['snapshot_hash_valid'] = false;
+        self::assertSame(Occurrence::INSUFFICIENT, $check($receipts)[0]->classification);
+    }
+
     public function testOptionalFiscalSourceAbsenceIsAnInfoFinding(): void
     {
         $findings = Engine::evaluate(new Snapshot(1, 'BRL', [

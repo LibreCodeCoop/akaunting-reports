@@ -35,42 +35,72 @@ final class FiscalReceiptRule implements Rule
                 $invoices[(int) ($document['id'] ?? 0)] = $document;
             }
         }
-        $found = [];
+        $groups = [];
         foreach ($snapshot->rows('fiscal_receipts') as $receipt) {
+            // Several active NFS-e receipts may settle different parts of one invoice.
             if ((string) ($receipt['status'] ?? '') !== 'emitted') {
-                continue; // Substituted and cancelled receipts are historical evidence.
+                continue;
             }
             $invoiceId = (int) ($receipt['invoice_id'] ?? 0);
             $receiptId = (int) ($receipt['id'] ?? 0);
-            if ($receiptId <= 0 || $invoiceId <= 0 || !isset($invoices[$invoiceId])) {
-                continue;
+            if ($receiptId > 0 && $invoiceId > 0 && isset($invoices[$invoiceId])) {
+                $groups[$invoiceId][] = $receipt;
             }
-            $invoice = $invoices[$invoiceId];
-            $evidence = ['invoice_id' => $invoiceId];
-            $sourceType = (string) ($receipt['snapshot_source'] ?? '');
-            $sourceHashValid = ($receipt['snapshot_hash_valid'] ?? false) === true;
-            if ($sourceType !== 'authorized_xml' || !$sourceHashValid
-                || (string) ($invoice['currency_code'] ?? '') !== $snapshot->currencyCode) {
-                $found[] = $this->finding($snapshot->companyId, $receiptId, 'unverifiable_fiscal_source',
-                    Occurrence::INSUFFICIENT, 'info', $evidence);
-                continue;
-            }
+        }
 
+        $found = [];
+        ksort($groups, SORT_NUMERIC);
+        foreach ($groups as $invoiceId => $receipts) {
+            usort($receipts, static fn (array $a, array $b): int =>
+                ((int) $a['id']) <=> ((int) $b['id']));
+            $firstReceiptId = (int) $receipts[0]['id'];
+            $invoice = $invoices[$invoiceId];
+            $evidence = ['invoice_id' => (int) $invoiceId, 'receipt_count' => count($receipts)];
+            $unverifiableSource = (string) ($invoice['currency_code'] ?? '') !== $snapshot->currencyCode;
+            $unverifiableAmount = false;
+            $grossTotal = 0;
+            foreach ($receipts as $receipt) {
+                $unverifiableSource = $unverifiableSource
+                    || (string) ($receipt['snapshot_source'] ?? '') !== 'authorized_xml'
+                    || ($receipt['snapshot_hash_valid'] ?? false) !== true;
+                if ($unverifiableSource) {
+                    continue;
+                }
+                try {
+                    $gross = Money::cents((string) ($receipt['gross_service_value'] ?? ''));
+                    if ($gross < 0) {
+                        throw new UnexpectedValueException('Negative fiscal amount.');
+                    }
+                    $grossTotal += $gross;
+                } catch (UnexpectedValueException) {
+                    $unverifiableAmount = true;
+                }
+            }
+            if ($unverifiableSource) {
+                $found[] = $this->finding($snapshot->companyId, $firstReceiptId,
+                    'unverifiable_fiscal_source', Occurrence::INSUFFICIENT, 'info', $evidence);
+                continue;
+            }
+            if ($unverifiableAmount) {
+                $found[] = $this->finding($snapshot->companyId, $firstReceiptId,
+                    'unverifiable_fiscal_amount', Occurrence::INSUFFICIENT, 'info', $evidence);
+                continue;
+            }
             try {
-                $gross = Money::cents((string) ($receipt['gross_service_value'] ?? ''));
                 $invoiceTotal = Money::cents((string) ($invoice['amount'] ?? ''));
-                if ($gross < 0 || $invoiceTotal < 0) {
-                    throw new UnexpectedValueException('Negative amount.');
+                if ($invoiceTotal < 0) {
+                    throw new UnexpectedValueException('Negative invoice amount.');
                 }
             } catch (UnexpectedValueException) {
-                $found[] = $this->finding($snapshot->companyId, $receiptId, 'unverifiable_fiscal_amount',
-                    Occurrence::INSUFFICIENT, 'info', $evidence);
+                $found[] = $this->finding($snapshot->companyId, $firstReceiptId,
+                    'unverifiable_fiscal_amount', Occurrence::INSUFFICIENT, 'info', $evidence);
                 continue;
             }
-            if ($gross !== $invoiceTotal) {
-                $found[] = $this->finding($snapshot->companyId, $receiptId, 'fiscal_gross_mismatch',
-                    Occurrence::SUSPECTED, 'warning', [
-                        ...$evidence, 'fiscal_gross_cents' => $gross, 'invoice_total_cents' => $invoiceTotal,
+            if ($grossTotal !== $invoiceTotal) {
+                $found[] = $this->finding($snapshot->companyId, $firstReceiptId,
+                    'fiscal_gross_mismatch', Occurrence::SUSPECTED, 'warning', [
+                        ...$evidence, 'fiscal_gross_cents' => $grossTotal,
+                        'invoice_total_cents' => $invoiceTotal,
                     ]);
             }
         }

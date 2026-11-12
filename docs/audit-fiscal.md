@@ -17,7 +17,11 @@ Issuance never proves payment.
 
 An active receipt with a valid authorized-XML snapshot hash format can be
 compared with an explicitly linked accounting invoice in the same company
-and currency. A difference between fiscal gross service value and invoice
+and currency. When several active fiscal receipts refer to the same invoice, compare the
+**sum** of authorized gross service values with the accounting invoice total;
+do not compare each partial receipt individually. If any active receipt lacks
+verifiable source evidence, the entire comparison is insufficient.
+A difference between that authorized aggregate and the invoice
 total is a **suspicion**, not a confirmed discrepancy: discounts, aggregation,
 classification and other legitimate causes may explain it. A syntactically
 valid snapshot hash does **not** prove the underlying XML was revalidated.
