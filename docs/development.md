@@ -3,7 +3,7 @@
 
 # Development and verification
 
-Requires PHP 8.3 or later, Composer 2 and a compatible Akaunting installation for integration testing.
+Requires a PHP version satisfying the root `composer.json` constraint, Composer 2 and a compatible Akaunting installation for integration testing.
 
 Development tools are isolated under `vendor-bin`; they are not loaded by Akaunting in production.
 
