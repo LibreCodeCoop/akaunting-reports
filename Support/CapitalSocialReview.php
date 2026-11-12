@@ -83,6 +83,12 @@ final class CapitalSocialReview
         return trans('akaunting-reports::ui.' . $key);
     }
 
+    /** Stable machine code corresponding to a member-capital review reason. */
+    public static function reasonKey(string $reason): ?string
+    {
+        return self::REASON_KEYS[$reason] ?? null;
+    }
+
     public static function reason(string $reason): string
     {
         if ($reason === '') {
