@@ -10,7 +10,7 @@ use InvalidArgumentException;
 
 /**
  * One finding, never an accounting mutation. IDs are stable for the same rule,
- * company, source and case, even when supporting evidence changes.
+ * company, source, case and competence, even when evidence changes.
  *
  * Evidence contains only normalized numbers, flags and machine codes. Never
  * include names, tax numbers, free-text descriptions or credentials.
@@ -62,7 +62,7 @@ final readonly class Occurrence
             }
         }
         $this->id = hash('sha256', json_encode(
-            [$companyId, $ruleId, $ruleVersion, $source, $sourceId, $caseKey],
+            [$companyId, $ruleId, $ruleVersion, $source, $sourceId, $caseKey, $competence],
             JSON_THROW_ON_ERROR
         ));
     }
