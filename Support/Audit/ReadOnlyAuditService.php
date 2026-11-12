@@ -29,7 +29,7 @@ final class ReadOnlyAuditService
         }
 
         $reader = new DocumentSettlementReader();
-        $rules = [new DocumentSettlementRule()];
+        $rules = [new DocumentSettlementRule(), new CategoryIntegrityRule()];
         $fiscalAvailable = class_exists(FiscalReceiptRule::class)
             && class_exists(FiscalReceiptReader::class);
         if ($fiscalAvailable) {
@@ -52,6 +52,7 @@ final class ReadOnlyAuditService
             $sources = [
                 'documents' => ['available' => true, 'rows' => $documents],
                 'transactions' => ['available' => true, 'rows' => $snapshot->rows('transactions')],
+                'categories' => ['available' => true, 'rows' => $snapshot->rows('categories')],
             ];
             if ($fiscalAvailable) {
                 $sources['fiscal_receipts'] = (new FiscalReceiptReader())->read($companyId, $ids);

@@ -27,6 +27,10 @@ preview is limited to 500 documents; the full report is limited to 10,000.
 If a scan is truncated, the warning must remain visible and the totals must
 be interpreted as partial.
 
+The widget summarizes severity (critical, warning, information) and reference
+months. Category checks use only native income/expense opposite-direction
+types and never treat unknown extensions as proven inconsistencies.
+
 A status mismatch can reflect legitimate credits, adjustments, migration history
 or reversals. Payment and fiscal invoices are distinct concepts. A fiscal gross
 difference can also reflect discounts or the scope of an issued receipt.

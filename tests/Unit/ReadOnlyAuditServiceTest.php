@@ -72,6 +72,25 @@ final class ReadOnlyAuditServiceTest extends TestCase
     }
 
     #[RunInSeparateProcess]
+    public function testCategoryConflictsUseOnlyAuthorizedCompanyCategories(): void
+    {
+        self::loadFixture();
+        Runtime::$tables['documents'][0]['category_id'] = 7;
+        Runtime::$tables['documents'][1]['category_id'] = 8;
+        Runtime::$tables['categories'] = [
+            ['company_id' => 1, 'id' => 7, 'type' => 'expense', 'deleted_at' => null],
+            ['company_id' => 2, 'id' => 8, 'type' => 'income', 'deleted_at' => null],
+        ];
+
+        $one = (new ReadOnlyAuditService())->inspect(1, 'BRL');
+        self::assertSame(2, $one['scanned']);
+        self::assertCount(1, array_filter($one['findings'],
+            static fn ($finding): bool => $finding->ruleId === 'category_integrity'));
+        $two = (new ReadOnlyAuditService())->inspect(2, 'BRL');
+        self::assertSame([], $two['findings']);
+    }
+
+    #[RunInSeparateProcess]
     public function testReportAuthorizationDenialStopsAllQueries(): void
     {
         self::loadFixture();

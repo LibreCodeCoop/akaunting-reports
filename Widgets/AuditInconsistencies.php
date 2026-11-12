@@ -25,10 +25,10 @@ final class AuditInconsistencies extends Widget
             abort(403);
         }
         $preview = app(ReadOnlyAuditService::class)->inspect((int) company_id(), default_currency(), 500);
-        $counts = ['confirmed' => 0, 'suspected' => 0, 'insufficient' => 0];
+        $counts = ['critical' => 0, 'warning' => 0, 'info' => 0];
         $periods = [];
         foreach ($preview['findings'] as $finding) {
-            ++$counts[$finding->classification];
+            ++$counts[$finding->severity];
             $month = $finding->competence ?? 'unknown';
             $periods[$month] = ($periods[$month] ?? 0) + 1;
         }
