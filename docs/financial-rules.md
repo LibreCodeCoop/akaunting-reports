@@ -26,3 +26,16 @@ Exported CSV values use machine-readable decimal values and include the configur
 ## Release verification
 
 Tests use synthetic records and isolated tools. A release also requires a read-only reconciliation at movement and member/month level against the authoritative source, a permission check and visual validation of filters and exports. Never commit private accounting exports, client identities, credentials or infrastructure details.
+
+## Member capital dashboard widget
+
+The optional dashboard widget uses the same company-specific capital category, item and
+financial rules as the native Capital Social report. It reads the **confirmed capital
+balance**, reports pending records and warnings separately and applies a current-date cut.
+The balance is an equity position, **not** bank cash or unrestricted liquidity. An
+assembly-approved transfer of surplus to member capital is not a bank receipt and must
+not be fabricated as an invoice to populate the widget.
+
+The widget is available only to users authorized for both the native capital report and
+the widget; rerun the capital installation command after updating the module to provision
+its widget permission for administrator roles. No financial values are modified.

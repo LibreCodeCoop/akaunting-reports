@@ -13,7 +13,9 @@
     "Modules\\AkauntingReports\\Reports\\CapitalSocial",
     "Modules\\AkauntingReports\\Reports\\FrraAnnual"
   ],
-  "widgets": [],
+  "widgets": [
+    "Modules\\AkauntingReports\\Widgets\\CapitalSocial"
+  ],
   "settings": [],
   "extra-modules": {}
 }
