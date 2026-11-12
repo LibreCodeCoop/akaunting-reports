@@ -111,6 +111,33 @@ try {
 }
 requireCondition($otherCompanyDenied, 'Active company isolation failed.');
 
+$reportModel = App\Models\Common\Report::query()
+    ->where('company_id', $company1)
+    ->where('class', AuditInconsistencies::class)
+    ->firstOrFail();
+$report = new AuditInconsistencies($reportModel, false);
+$report->setViews();
+$report->setData();
+$html = view('akaunting-reports::reports.audit.content', ['class' => $report])->render();
+requireCondition(str_contains($html, 'Draft document with a linked payment'),
+    'Akaunting native audit content failed to render its finding.');
+requireCondition(str_contains($html, 'Document category'),
+    'Akaunting native audit content failed to render category findings.');
+$print = $report->print()->render();
+requireCondition(str_contains($print, 'Financial inconsistency audit'),
+    'Akaunting print layout failed to render.');
+
+ob_start();
+$report->export()->sendContent();
+$csv = (string) ob_get_clean();
+requireCondition(str_contains($csv, 'document_settlement')
+    && str_contains($csv, 'category_integrity'),
+    'Native CSV export omitted synthetic financial findings.');
+$widget = new \Modules\AkauntingReports\Widgets\AuditInconsistencies();
+$widgetHtml = $widget->show()->render();
+requireCondition(str_contains($widgetHtml, 'By reference month'),
+    'Akaunting dashboard widget failed to render its period summary.');
+
 requireCondition($before === $ledger(), 'Audit changed an accounting document or transaction.');
 
 Auth::logout();

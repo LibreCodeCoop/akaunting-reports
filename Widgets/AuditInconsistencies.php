@@ -8,6 +8,7 @@ namespace Modules\AkauntingReports\Widgets;
 
 use App\Abstracts\Widget;
 use App\Utilities\Reports;
+use App\Utilities\Widgets;
 use Modules\AkauntingReports\Reports\AuditInconsistencies as Report;
 use Modules\AkauntingReports\Support\Audit\ReadOnlyAuditService;
 
@@ -21,7 +22,8 @@ final class AuditInconsistencies extends Widget
 
     public function show()
     {
-        if ((int) company_id() <= 0 || user() === null || Reports::cannotRead(Report::class)) {
+        if ((int) company_id() <= 0 || user() === null || Reports::cannotRead(Report::class)
+            || Widgets::cannotRead(self::class)) {
             abort(403);
         }
         $preview = app(ReadOnlyAuditService::class)->inspect((int) company_id(), default_currency(), 500);
