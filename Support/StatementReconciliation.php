@@ -44,7 +44,7 @@ final class StatementReconciliation
             }
             $totals[$target] ??= ['opening_cents' => 0, 'debit_cents' => 0, 'credit_cents' => 0, 'closing_cents' => 0];
             foreach ($totals[$target] as $field => $previous) {
-                $totals[$target][$field] = $previous + $account[$field];
+                $totals[$target][$field] = CheckedCents::add($previous, $account[$field]);
             }
         }
         sort($unmapped, SORT_STRING);
@@ -53,7 +53,7 @@ final class StatementReconciliation
         foreach ($totals as $target => $totalsByField) {
             $delta = [];
             foreach ($totalsByField as $field => $sum) {
-                $delta[$field] = $sum - $internalAccounts[$target][$field];
+                $delta[$field] = CheckedCents::subtract($sum, $internalAccounts[$target][$field]);
             }
             $differences[] = [
                 'internal_code' => $target,
