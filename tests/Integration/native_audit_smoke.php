@@ -206,6 +206,10 @@ requireCondition(trans('akaunting-reports::audit.draft_with_payment')
 $print = $report->print()->render();
 requireCondition(str_contains($print, 'Financial inconsistency audit'),
     'Akaunting print layout failed to render.');
+// Exercise Akaunting's DOMPDF path, not only the print HTML template.
+$pdfResponse = $report->pdf();
+requireCondition(str_starts_with((string) $pdfResponse->getContent(), '%PDF-'),
+    'Native audit PDF export did not produce a PDF document.');
 
 ob_start();
 $report->export()->sendContent();
