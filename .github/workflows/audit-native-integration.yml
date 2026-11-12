@@ -65,6 +65,29 @@ jobs:
           tar --exclude='.git' --exclude='vendor' --exclude='vendor-bin' \
               --exclude='tests' --exclude='.github' \
               -cf - . | tar -xf - -C "$AKAUNTING_APP_DIR/modules/AkauntingReports"
+      - name: Compose pending dependent PRs only in disposable homologation
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Immutable heads: PR #15 for identity v2 and PR #17 for fiscal/FRA/capital.
+          # Never modify the checked-out repository or persist these overlays.
+          git fetch --no-tags origin f759d63cb5f6cb46973eda46f01d48d2ad907886
+          core="$(git rev-parse FETCH_HEAD)"
+          test "$core" = "f759d63cb5f6cb46973eda46f01d48d2ad907886"
+          for path in Support/Audit/Occurrence.php Support/Audit/Catalog.php; do
+            git show "$core:$path" > "$AKAUNTING_APP_DIR/modules/AkauntingReports/$path"
+          done
+          git fetch --no-tags origin e27bfa36bd802f434bf2da82677789769138daae
+          fiscal="$(git rev-parse FETCH_HEAD)"
+          test "$fiscal" = "e27bfa36bd802f434bf2da82677789769138daae"
+          for path in \
+            Support/Audit/FiscalReceiptRule.php Support/Audit/FiscalReceiptReader.php \
+            Support/Audit/FrraIntegrityRule.php Support/Audit/FrraIntegrityReader.php \
+            Support/Audit/CapitalIntegrityRule.php Support/Audit/CapitalIntegrityReader.php \
+            Support/CapitalSocialReview.php; do
+            git show "$fiscal:$path" > "$AKAUNTING_APP_DIR/modules/AkauntingReports/$path"
+          done
+          echo "Synthetic full-stack audit source assembled from pinned PR heads."
       - name: Initialize throwaway MySQL database
         shell: bash
         run: |
