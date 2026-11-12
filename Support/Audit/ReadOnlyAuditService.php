@@ -78,6 +78,20 @@ final class ReadOnlyAuditService
             }
         }
 
+        // Capital review signals require the separately authorized native
+        // capital report. Never expose member-level evidence to audit-only users.
+        if (class_exists(CapitalIntegrityReader::class) && class_exists(CapitalIntegrityRule::class)) {
+            $permitted = Reports::canRead(\Modules\AkauntingReports\Reports\CapitalSocial::class);
+            $capital = $permitted
+                ? (new CapitalIntegrityReader())->read($companyId, $currency)
+                : ['available' => false, 'rows' => []];
+            foreach (Engine::evaluate(
+                new Snapshot($companyId, $currency, ['capital_entries' => $capital]),
+                new Catalog([new CapitalIntegrityRule()])
+            ) as $item) {
+                $findings[$item->id()] = $item;
+            }
+        }
         $truncated = $scanned >= $maxDocuments &&
             (new DocumentSettlementReader())->read($companyId, $currency, $cursor, 1)->rows('documents') !== [];
         ksort($findings, SORT_STRING);
