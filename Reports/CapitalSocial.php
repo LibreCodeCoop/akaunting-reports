@@ -11,7 +11,7 @@ use App\Utilities\Date;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Support\CapitalSocialLedger;
-use Modules\AkauntingReports\Support\CapitalSocialPolicy;
+use Modules\AkauntingReports\Support\CapitalSocialPolicyResolver;
 use Modules\AkauntingReports\Support\CapitalSocialReview;
 use Modules\AkauntingReports\Support\CapitalSocialSorter;
 use Modules\AkauntingReports\Support\CapitalSocialSummary;
@@ -207,36 +207,12 @@ final class CapitalSocial extends Report
         $this->asOf = $this->getAsOfDate()->toDateString();
 
         $settings = DB::table('settings')->where('company_id', $companyId)
-            ->whereIn('key', [
-                'akaunting-reports.capital.category_id',
-                'akaunting-reports.capital.item_id',
-                'akaunting-reports.capital.refund_code',
-                'akaunting-reports.capital.advance_category_id',
-                'akaunting-reports.capital.advance_item_id',
-                'akaunting-reports.capital.legacy_refund_category_id',
-                'akaunting-reports.capital.late_deduction_item_id',
-                'akaunting-reports.capital.excluded_expense_category_id',
-            ])->pluck('value', 'key');
-
-        $categoryId = (int) ($settings['akaunting-reports.capital.category_id'] ?? 0);
-        $itemId = (int) ($settings['akaunting-reports.capital.item_id'] ?? 0);
-        if ($categoryId <= 0 || $itemId <= 0) {
+            ->whereIn('key', CapitalSocialPolicyResolver::SETTING_KEYS)->pluck('value', 'key');
+        $policy = CapitalSocialPolicyResolver::resolve($companyId, default_currency(), $settings->all());
+        if ($policy === null) {
             $this->configurationError = trans('akaunting-reports::ui.capital_config_error');
             return;
         }
-
-        $policy = new CapitalSocialPolicy(
-            companyId: $companyId,
-            categoryId: $categoryId,
-            itemId: $itemId,
-            currencyCode: default_currency(),
-            refundCategoryCode: (string) ($settings['akaunting-reports.capital.refund_code'] ?? 'capital-social-refund'),
-            advanceCategoryId: self::positiveOrNull($settings['akaunting-reports.capital.advance_category_id'] ?? null),
-            advanceItemId: self::positiveOrNull($settings['akaunting-reports.capital.advance_item_id'] ?? null),
-            legacyRefundCategoryId: self::positiveOrNull($settings['akaunting-reports.capital.legacy_refund_category_id'] ?? null),
-            lateDeductionItemId: self::positiveOrNull($settings['akaunting-reports.capital.late_deduction_item_id'] ?? null),
-            excludedExpenseCategoryId: self::positiveOrNull($settings['akaunting-reports.capital.excluded_expense_category_id'] ?? null),
-        );
 
         $all = app(CapitalSocialLedger::class)->rows($policy, null, $this->asOf);
         $this->unfilteredSummary = CapitalSocialSummary::calculate($all);
@@ -493,11 +469,6 @@ final class CapitalSocial extends Report
         $query = request()->except(['search', 'sort', 'direction', 'page', 'tab']);
         $query['search'] = implode(' ', $tokens);
         return route('reports.show', $this->model->id) . '?' . http_build_query($query);
-    }
-
-    private static function positiveOrNull(mixed $value): ?int
-    {
-        return $value !== null && (int) $value > 0 ? (int) $value : null;
     }
 
     public function export(): StreamedResponse

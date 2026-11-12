@@ -7,12 +7,17 @@ declare(strict_types=1);
 namespace Modules\AkauntingReports\Console;
 
 use Illuminate\Console\Command;
+use App\Traits\Permissions;
+use App\Utilities\Widgets;
+use Modules\AkauntingReports\Widgets\CapitalSocial as CapitalSocialWidget;
 use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Reports\CapitalSocial;
 
 /** Explicit per-company provisioning; never runs automatically at module boot. */
 final class InstallCapitalSocial extends Command
 {
+    use Permissions;
+
     protected $signature = 'akaunting-reports:install-capital
         {--company= : Existing company ID}
         {--category= : Existing capital category ID in the company}
@@ -115,6 +120,14 @@ final class InstallCapitalSocial extends Command
                 ]);
             }
         });
+        // This command already validates company-specific configuration; its
+        // repeatable execution also provisions the dashboard widget permission.
+        $widgetPermission = $this->createPermission(
+            Widgets::getPermission(CapitalSocialWidget::class),
+            trans('akaunting-reports::ui.capital_widget_permission')
+        );
+        $this->attachPermissionsToAdminRoles([$widgetPermission]);
+
         $this->info(trans('akaunting-reports::cli.capital_installed'));
         return self::SUCCESS;
     }
