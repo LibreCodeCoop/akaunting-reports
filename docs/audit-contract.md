@@ -1,7 +1,7 @@
 <!-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors -->
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
-# Financial audit contract (catalog v1)
+# Financial audit contract (catalog v2)
 
 The first delivery of issue #7 is a pure evaluation core, not an installed report.
 
@@ -18,8 +18,9 @@ does not mean there was a financial discrepancy. The engine never writes.
 A Catalog registers unique rule IDs, positive rule versions, and required
 sources. Increment the rule version when the meaning of a rule changes.
 Occurrence identity is the SHA-256 of company, rule ID/version, source, opaque
-source ID and case key. Supporting evidence is deliberately excluded from the
-identity. Findings are sorted by ID; repeated evaluation with identical
+source ID, case key and competence. One document can contain several monthly
+findings, each with a distinct stable identity. Supporting evidence is excluded
+from the identity. Findings are sorted by ID; repeated evaluation with identical
 snapshots and rule versions produces identical findings.
 
 Classifications are **confirmed**, **suspected**, and **insufficient**.

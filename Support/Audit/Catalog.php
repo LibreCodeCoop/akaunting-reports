@@ -11,7 +11,7 @@ use InvalidArgumentException;
 /** Versioned, explicit registry; a rule may never silently shadow another. */
 final readonly class Catalog
 {
-    public const VERSION = 1;
+    public const VERSION = 2;
 
     /** @param list<Rule> $rules */
     public function __construct(private array $rules)
