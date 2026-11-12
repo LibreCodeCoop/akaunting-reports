@@ -10,6 +10,7 @@ use App\Abstracts\Report;
 use App\Utilities\Reports;
 use Illuminate\Support\Facades\Route;
 use Modules\AkauntingReports\Support\Audit\Occurrence;
+use Modules\AkauntingReports\Support\Audit\FindingPage;
 use Modules\AkauntingReports\Support\Audit\ReadOnlyAuditService;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -38,6 +39,13 @@ final class AuditInconsistencies extends Report
     public string $selectedClassification = 'all';
     public string $selectedSeverity = 'all';
     public string $selectedSource = 'all';
+    public string $selectedRule = 'all';
+    public string $selectedYear = 'all';
+    /** @var list<Occurrence> */
+    public array $visible = [];
+    public int $page = 1;
+    public int $pages = 1;
+    public int $matching = 0;
 
     public function setViews(): void
     {
@@ -71,6 +79,16 @@ final class AuditInconsistencies extends Report
                 'values' => self::sourceOptions(),
                 'selected' => 'all', 'attributes' => [],
             ],
+            [
+                'type' => 'select', 'name' => 'rule',
+                'title' => trans('akaunting-reports::audit.rule'),
+                'values' => self::ruleOptions(), 'selected' => 'all', 'attributes' => [],
+            ],
+            [
+                'type' => 'select', 'name' => 'year',
+                'title' => trans('akaunting-reports::audit.year'),
+                'values' => self::yearOptions(), 'selected' => 'all', 'attributes' => [],
+            ],
         ];
     }
 
@@ -81,6 +99,8 @@ final class AuditInconsistencies extends Report
             'classification' => self::classificationOptions(),
             'severity' => self::severityOptions(),
             'source' => self::sourceOptions(),
+            'rule' => self::ruleOptions(),
+            'year' => self::yearOptions(),
         ] as $name => $options) {
             $this->filters[$name] = $options;
             $this->filters['keys'][$name] = $name;
@@ -101,6 +121,8 @@ final class AuditInconsistencies extends Report
         $this->selectedClassification = $this->choice('classification', self::classificationOptions());
         $this->selectedSeverity = $this->choice('severity', self::severityOptions());
         $this->selectedSource = $this->choice('source', self::sourceOptions());
+        $this->selectedRule = $this->choice('rule', self::ruleOptions());
+        $this->selectedYear = $this->choice('year', self::yearOptions());
         $inspection = app(ReadOnlyAuditService::class)->inspect($companyId, default_currency());
         $this->findings = $inspection['findings'];
         $this->scanned = $inspection['scanned'];
@@ -111,12 +133,22 @@ final class AuditInconsistencies extends Report
         foreach ($this->findings as $finding) {
             ++$this->counts[$finding->classification];
         }
-        $this->filtered = array_values(array_filter($this->findings,
-            fn (Occurrence $finding): bool =>
-                ($this->selectedClassification === 'all' || $finding->classification === $this->selectedClassification)
-                && ($this->selectedSeverity === 'all' || $finding->severity === $this->selectedSeverity)
-                && ($this->selectedSource === 'all' || $finding->source === $this->selectedSource)
-        ));
+        $requested = request()->query('page', '1');
+        if (!is_scalar($requested) || !preg_match('/^[1-9][0-9]{0,3}$/D', (string) $requested)) {
+            abort(422, trans('akaunting-reports::audit.invalid_page'));
+        }
+        $page = FindingPage::select($this->findings, [
+            'classification' => $this->selectedClassification,
+            'severity' => $this->selectedSeverity,
+            'source' => $this->selectedSource,
+            'rule' => $this->selectedRule,
+            'year' => $this->selectedYear,
+        ], (int) $requested);
+        $this->filtered = $page['all'];
+        $this->visible = $page['rows'];
+        $this->page = $page['page'];
+        $this->pages = $page['pages'];
+        $this->matching = $page['total'];
     }
 
     public function export(): StreamedResponse
@@ -176,6 +208,23 @@ final class AuditInconsistencies extends Report
             abort(422, trans('akaunting-reports::audit.invalid_filter'));
         }
         return $value;
+    }
+
+    public static function ruleOptions(): array
+    {
+        return ['all' => trans('akaunting-reports::audit.all'),
+            'document_settlement' => trans('akaunting-reports::audit.document_settlement'),
+            'nfse_gross_comparison' => trans('akaunting-reports::audit.nfse_gross_comparison')];
+    }
+
+    public static function yearOptions(): array
+    {
+        $years = ['all' => trans('akaunting-reports::audit.all')];
+        $current = (int) \App\Utilities\Date::today()->year;
+        for ($year = $current; $year >= 2000; --$year) {
+            $years[(string) $year] = (string) $year;
+        }
+        return $years;
     }
 
     public static function classificationOptions(): array

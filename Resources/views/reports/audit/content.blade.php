@@ -32,7 +32,7 @@
                 </tr>
             </thead>
             <tbody>
-                @forelse ($class->filtered as $finding)
+                @forelse ($class->visible as $finding)
                     <tr class="border-t border-gray-200">
                         <td class="p-3">{{ trans('akaunting-reports::audit.' . $finding->severity) }}</td>
                         <td class="p-3">{{ trans('akaunting-reports::audit.' . $finding->classification) }}</td>
@@ -57,6 +57,22 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+    <div class="flex items-center justify-between gap-3 text-xs text-gray-600">
+        <span>{{ trans('akaunting-reports::audit.matching') }}: {{ $class->matching }} ·
+            {{ trans('akaunting-reports::audit.page') }} {{ $class->page }} / {{ $class->pages }}</span>
+        <nav aria-label="{{ trans('akaunting-reports::audit.page_navigation') }}" class="flex gap-4">
+            @if ($class->page > 1)
+                <a class="text-purple hover:underline" href="{{ request()->fullUrlWithQuery(['page' => $class->page - 1]) }}">
+                    {{ trans('akaunting-reports::audit.previous') }}
+                </a>
+            @endif
+            @if ($class->page < $class->pages)
+                <a class="text-purple hover:underline" href="{{ request()->fullUrlWithQuery(['page' => $class->page + 1]) }}">
+                    {{ trans('akaunting-reports::audit.next') }}
+                </a>
+            @endif
+        </nav>
     </div>
     <p class="text-xs text-gray-500">{{ trans('akaunting-reports::audit.read_only') }}</p>
 </div>

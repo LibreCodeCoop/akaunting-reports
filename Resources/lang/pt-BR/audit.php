@@ -3,6 +3,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 return [
+    'year' => 'Ano de referência',
+    'matching' => 'Ocorrências filtradas',
+    'page' => 'Página',
+    'page_navigation' => 'Páginas dos resultados de auditoria',
+    'previous' => 'Anterior',
+    'next' => 'Próxima',
+    'invalid_page' => 'Página de auditoria inválida.',
+    'document_settlement' => 'Liquidação de documentos',
+    'nfse_gross_comparison' => 'Conciliação fiscal NFS-e',
+    'by_period' => 'Por mês de referência',
+    'unknown_period' => 'Mês não comprovado ou desconhecido',
     'title' => 'Auditoria de inconsistências financeiras',
     'description' => 'Alertas vinculados aos registros de origem; nenhum lançamento é alterado.',
     'widget_title' => 'Alertas da auditoria financeira',

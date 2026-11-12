@@ -17,7 +17,10 @@ permissions to admin roles. No payment, accounting or tax document is created,
 corrected or cancelled. Additional viewers require an explicit native ACL grant.
 The dashboard widget also checks the **report's read permission**.
 
-Filters: assessment, severity, source. Export: CSV using machine-readable
+Filters: assessment, severity, source, rule and reference year. Page size is
+50 findings, sorted deterministically by severity, descending reference month
+and stable occurrence ID; navigation never relies on offset-based SQL scans.
+CSV and PDF export use all filtered findings, not just the visible page. Export: CSV using machine-readable
 identifiers, integer-cent evidence and deterministic occurrence IDs.
 The native print and PDF paths use a separate printable view. The dashboard
 preview is limited to 500 documents; the full report is limited to 10,000.

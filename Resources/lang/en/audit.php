@@ -3,6 +3,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 return [
+    'year' => 'Reference year',
+    'matching' => 'Matching findings',
+    'page' => 'Page',
+    'page_navigation' => 'Audit result pages',
+    'previous' => 'Previous',
+    'next' => 'Next',
+    'invalid_page' => 'Invalid audit page.',
+    'document_settlement' => 'Document settlement',
+    'nfse_gross_comparison' => 'NFS-e fiscal comparison',
+    'by_period' => 'By reference month',
+    'unknown_period' => 'Unknown or unassigned month',
     'title' => 'Financial inconsistency audit',
     'description' => 'Source-linked review findings; no accounting records are changed.',
     'widget_title' => 'Financial audit alerts',

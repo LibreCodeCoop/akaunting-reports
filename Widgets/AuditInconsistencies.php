@@ -26,10 +26,15 @@ final class AuditInconsistencies extends Widget
         }
         $preview = app(ReadOnlyAuditService::class)->inspect((int) company_id(), default_currency(), 500);
         $counts = ['confirmed' => 0, 'suspected' => 0, 'insufficient' => 0];
+        $periods = [];
         foreach ($preview['findings'] as $finding) {
             ++$counts[$finding->classification];
+            $month = $finding->competence ?? 'unknown';
+            $periods[$month] = ($periods[$month] ?? 0) + 1;
         }
+        krsort($periods, SORT_STRING);
         return $this->view('akaunting-reports::widgets.audit-inconsistencies', [
+            'periods' => array_slice($periods, 0, 6, true),
             'counts' => $counts,
             'scanned' => $preview['scanned'],
             'truncated' => $preview['truncated'],

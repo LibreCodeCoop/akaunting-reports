@@ -9,6 +9,17 @@
             </div>
         @endforeach
     </div>
+    @if ($periods !== [])
+        <div class="mt-4 border-t border-gray-200 pt-3 text-xs">
+            <div class="font-medium text-gray-700 mb-2">{{ trans('akaunting-reports::audit.by_period') }}</div>
+            @foreach ($periods as $month => $count)
+                <div class="flex justify-between py-1">
+                    <span>{{ $month === 'unknown' ? trans('akaunting-reports::audit.unknown_period') : $month }}</span>
+                    <span class="tabular-nums">{{ $count }}</span>
+                </div>
+            @endforeach
+        </div>
+    @endif
     <p class="text-xs text-gray-500 mt-3">
         {{ trans('akaunting-reports::audit.scanned') }}: {{ $scanned }}.
         @if ($truncated) {{ trans('akaunting-reports::audit.preview_truncated') }} @endif
