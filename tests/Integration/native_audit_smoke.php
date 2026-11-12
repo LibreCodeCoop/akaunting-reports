@@ -224,7 +224,7 @@ $makeWidgetModel = static function (string $class, int $id, string $name) use ($
     $model->company_id = $company1;
     $model->class = $class;
     $model->name = $name;
-    $model->settings = json_encode(['width' => '50'], JSON_THROW_ON_ERROR);
+    $model->settings = (object) ['width' => '50'];
 
     return $model;
 };
