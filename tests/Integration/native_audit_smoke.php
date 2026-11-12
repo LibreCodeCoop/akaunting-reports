@@ -68,7 +68,7 @@ $document = static fn (int $company, string $number, string $status, string $amo
     ]);
 $paid = $document($company1, 'TEST-1', 'paid', '100.00', $category1);
 $draft = $document($company1, 'TEST-2', 'draft', '70.00', $category1);
-$document($company1, 'TEST-3', 'sent', '9.00', $wrongCategory1);
+$categoryMismatch = $document($company1, 'TEST-3', 'sent', '9.00', $wrongCategory1);
 $otherCompany = $document($company2, 'TEST-4', 'paid', '200.00', $category2);
 $account = (int) DB::table('accounts')->where('company_id', $company1)->value('id');
 requireCondition($account > 0, 'Synthetic default bank account missing.');
@@ -80,6 +80,40 @@ foreach ([$paid => '100.00', $draft => '20.00'] as $id => $amount) {
         'currency_rate' => 1, 'account_id' => $account, 'category_id' => $category1,
         'payment_method' => 'cash', 'created_at' => $now, 'updated_at' => $now,
     ]);
+}
+// These NFS-e receipts are synthetic and exist only in this throwaway database.
+if (getenv('AUDIT_FULL_STACK') === 'yes') {
+    requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\FiscalReceiptRule::class),
+        'Optional fiscal rule was not composed in the fixture.');
+    requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\FrraIntegrityRule::class),
+        'Optional FRA rule was not composed in the fixture.');
+    requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\CapitalIntegrityRule::class),
+        'Optional capital rule was not composed in the fixture.');
+    requireCondition(\Modules\AkauntingReports\Support\Audit\Catalog::VERSION === 2,
+        'Competence-aware rule contract was not composed.');
+
+    \Illuminate\Support\Facades\Schema::create('nfse_receipts',
+        static function (\Illuminate\Database\Schema\Blueprint $table): void {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('invoice_id');
+            $table->string('status');
+            $table->json('authorized_fiscal_snapshot')->nullable();
+        });
+    foreach ([
+        [$paid, '40.00'],
+        [$paid, '60.00'],
+        [$categoryMismatch, '10.00'],
+    ] as [$invoiceId, $gross]) {
+        DB::table('nfse_receipts')->insert([
+            'invoice_id' => $invoiceId,
+            'status' => 'emitted',
+            'authorized_fiscal_snapshot' => json_encode([
+                'source' => 'authorized_xml',
+                'source_sha256' => str_repeat('a', 64),
+                'gross_service_value' => $gross,
+            ], JSON_THROW_ON_ERROR),
+        ]);
+    }
 }
 $company1Rows = (new DocumentSettlementReader())->read($company1, 'BRL')->rows('documents');
 requireCondition(!in_array($otherCompany, array_column($company1Rows, 'id'), true),
