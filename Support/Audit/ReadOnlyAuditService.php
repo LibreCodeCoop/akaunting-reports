@@ -62,6 +62,22 @@ final class ReadOnlyAuditService
                 $findings[$item->id()] = $item; // Repeat availability notices only once.
             }
         }
+        // Cooperative FRA evidence is optional and global to a competence.
+        // Scan it once, never once per document page, and only with its own
+        // report permission; otherwise treat the source as unavailable.
+        if (class_exists(FrraIntegrityReader::class) && class_exists(FrraIntegrityRule::class)) {
+            $permitted = Reports::canRead(\Modules\AkauntingReports\Reports\FrraAnnual::class);
+            $frra = $permitted
+                ? (new FrraIntegrityReader())->read($companyId, $currency)
+                : ['available' => false, 'rows' => []];
+            foreach (Engine::evaluate(
+                new Snapshot($companyId, $currency, ['frra_entries' => $frra]),
+                new Catalog([new FrraIntegrityRule()])
+            ) as $item) {
+                $findings[$item->id()] = $item;
+            }
+        }
+
         $truncated = $scanned >= $maxDocuments &&
             (new DocumentSettlementReader())->read($companyId, $currency, $cursor, 1)->rows('documents') !== [];
         ksort($findings, SORT_STRING);

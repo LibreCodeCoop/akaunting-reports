@@ -215,6 +215,7 @@ final class AuditInconsistencies extends Report
         return ['all' => trans('akaunting-reports::audit.all'),
             'document_settlement' => trans('akaunting-reports::audit.document_settlement'),
             'category_integrity' => trans('akaunting-reports::audit.category_integrity'),
+            'frra_integrity' => trans('akaunting-reports::audit.frra_integrity'),
             'nfse_gross_comparison' => trans('akaunting-reports::audit.nfse_gross_comparison')];
     }
 

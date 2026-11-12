@@ -18,7 +18,7 @@ namespace Modules\AkauntingReports\Tests\Fixtures {
 
         public static function reset(): void
         {
-            self::$tables = ['documents' => [], 'transactions' => [], 'nfse_receipts' => []];
+            self::$tables = ['documents' => [], 'transactions' => [], 'nfse_receipts' => [], 'settings' => []];
             self::$queries = 0;
             self::$denied = false;
             self::$activeCompany = 1;
@@ -88,6 +88,20 @@ namespace Modules\AkauntingReports\Tests\Fixtures {
         {
             $this->selection = $columns;
             return $this;
+        }
+
+        /** @return array<string,mixed> */
+        public function pluck(string $value, string $key): array
+        {
+            $records = FakeAuditRuntime::$tables[explode(' ', $this->table)[0]] ?? [];
+            foreach ($this->filters as $filter) {
+                $records = array_values(array_filter($records, $filter));
+            }
+            $out = [];
+            foreach ($records as $record) {
+                $out[(string) $record[$key]] = $record[$value];
+            }
+            return $out;
         }
 
         /** @return list<stdClass> */
@@ -163,6 +177,11 @@ namespace App\Utilities {
         public static function cannotRead(string $class): bool
         {
             return FakeAuditRuntime::$denied;
+        }
+
+        public static function canRead(string $class): bool
+        {
+            return !FakeAuditRuntime::$denied;
         }
     }
 }

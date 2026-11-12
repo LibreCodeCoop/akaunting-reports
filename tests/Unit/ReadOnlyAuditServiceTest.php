@@ -62,12 +62,14 @@ final class ReadOnlyAuditServiceTest extends TestCase
         self::assertFalse($one['truncated']);
         self::assertCount(1, array_filter($one['findings'],
             static fn ($finding): bool => $finding->source === 'document'));
-        self::assertSame('paid_shortfall', $one['findings'][0]->caseKey);
+        self::assertCount(1, array_filter($one['findings'],
+            static fn ($f): bool => $f->caseKey === 'paid_shortfall'));
 
         Runtime::$activeCompany = 2;
         $two = $service->inspect(2, 'BRL');
         self::assertSame(1, $two['scanned']);
-        self::assertSame([], $two['findings']);
+        self::assertSame([], array_values(array_filter($two['findings'],
+            static fn ($f): bool => $f->source === 'document')));
         self::assertSame($before, serialize(Runtime::$tables));
         self::assertGreaterThan(0, Runtime::$queries);
     }
