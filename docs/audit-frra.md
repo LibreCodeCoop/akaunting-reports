@@ -1,10 +1,10 @@
 <!-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors -->
 <!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
 
-# Optional FRA Annual classification checks
+# Optional FRRA Annual classification checks
 
 The reader uses only the five explicit company-specific mappings of the
-existing FRA Annual report. Missing configuration means insufficient
+existing FRRA Annual report. Missing configuration means insufficient
 evidence. It reuses the reviewed source reader and strips personal names,
 free text, tax identifiers and all other sensitive fields before evaluation.
 

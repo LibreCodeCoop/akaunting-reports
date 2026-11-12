@@ -40,8 +40,8 @@ preview is limited to 500 documents; the full report is limited to 10,000.
 If a scan is truncated, the warning must remain visible and the totals must
 be interpreted as partial.
 
-When the FRA Annual report mapping and its own read permission are available,
-read-only FRA comparisons reuse the existing company-specific source and
+When the FRRA Annual report mapping and its own read permission are available,
+read-only FRRA comparisons reuse the existing company-specific source and
 monthly competence rules. Mismatches are suspected and never bank deposits.
 See docs/audit-frra.md for limitations. Missing settings or permission produce
 insufficient evidence rather than unverified financial claims.

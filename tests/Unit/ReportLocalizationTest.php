@@ -40,11 +40,20 @@ final class ReportLocalizationTest extends TestCase
         $portugueseReports = require $base . 'pt-BR/reports.php';
 
         self::assertSame('Annual Member Reserve', $english['frra_annual']);
-        self::assertSame('FRA Anual', $portuguese['frra_annual']);
+        self::assertSame('FRRA Anual', $portuguese['frra_annual']);
+        self::assertSame('Fundo Remunerado de Repouso Anual', $portuguese['frra_full_name']);
         self::assertSame($english['frra_annual'], $englishReports['frra_annual']);
         self::assertSame($portuguese['frra_annual'], $portugueseReports['frra_annual']);
         self::assertSame('annual-member-reserve', $english['frra_export_filename']);
-        self::assertSame('fra-anual', $portuguese['frra_export_filename']);
+        self::assertSame('frra-anual', $portuguese['frra_export_filename']);
+        foreach (['reports.php', 'ui.php', 'cli.php', 'audit.php'] as $file) {
+            $translations = require $base . 'pt-BR/' . $file;
+            foreach ($translations as $value) {
+                if (is_string($value)) {
+                    self::assertDoesNotMatchRegularExpression('/\bFRA\b/u', $value, $file);
+                }
+            }
+        }
     }
 
     /** @return array<string,array{string}> */
