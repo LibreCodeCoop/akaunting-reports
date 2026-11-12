@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+/vendor/
+/node_modules/
+/.env
+/.env.*
+!.env.example
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+*.dump
+*.bak
+/coverage/
+/.phpunit.cache/
+/.idea/
+/.vscode/
+
+# Isolated developer toolchain
+/vendor/
+/vendor-bin/*/vendor/
+/.phpunit.cache/
+/.psalm/
+/build/
+/composer.phar

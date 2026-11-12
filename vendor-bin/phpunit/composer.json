@@ -1,0 +1,11 @@
+{
+    "name": "librecodecoop/akaunting-reports-phpunit",
+    "description": "Isolated PHPUnit tooling for Akaunting Reports",
+    "type": "project",
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

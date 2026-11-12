@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: PHPUnit
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: phpunit-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          tools: composer
+          coverage: none
+          extensions: mbstring,dom,xml,xmlwriter
+      - name: Install module autoload
+        run: composer install --no-interaction --no-progress --prefer-dist --no-plugins --no-scripts
+      - name: Install isolated PHPUnit
+        run: composer --working-dir=vendor-bin/phpunit install --no-interaction --no-progress --prefer-dist
+      - name: Test financial business rules
+        run: composer test:unit

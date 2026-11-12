@@ -1,0 +1,19 @@
+{
+  "alias": "akaunting-reports",
+  "icon": "analytics",
+  "version": "0.1.0-dev",
+  "active": 1,
+  "providers": [
+    "Modules\\AkauntingReports\\Providers\\Main"
+  ],
+  "aliases": {},
+  "files": [],
+  "requires": [],
+  "reports": [
+    "Modules\\AkauntingReports\\Reports\\CapitalSocial",
+    "Modules\\AkauntingReports\\Reports\\FrraAnnual"
+  ],
+  "widgets": [],
+  "settings": [],
+  "extra-modules": {}
+}
