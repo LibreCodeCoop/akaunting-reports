@@ -199,7 +199,7 @@ $configuredModel->settings = (object) [
 $configuredFields = $fieldsByName(new AuditInconsistencies($configuredModel, false));
 requireCondition($configuredFields['default_sort']['selected'] === 'source'
     && $configuredFields['default_direction']['selected'] === 'desc'
-    && count($configuredFields['default_sort']['values']) === count(\\Modules\\AkauntingReports\\Support\\Audit\\FindingPage::SORT_COLUMNS),
+    && count($configuredFields['default_sort']['values']) === count(\Modules\AkauntingReports\Support\Audit\FindingPage::SORT_COLUMNS),
     'Saved audit preferences were not reflected in Akaunting edit fields.');
 
 $report = new AuditInconsistencies($reportModel, false);
