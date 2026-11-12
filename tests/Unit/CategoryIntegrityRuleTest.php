@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 
 final class CategoryIntegrityRuleTest extends TestCase
 {
-    private static function run(string $type, string $status, ?array $category): array
+    private static function inspectCategory(string $type, string $status, ?array $category): array
     {
         $rows = $category === null ? [] : [[
             'company_id' => 2, 'id' => 7, 'type' => $category['type'],
@@ -27,8 +27,8 @@ final class CategoryIntegrityRuleTest extends TestCase
 
     public function testOppositeCategoryIsAReviewSignalForBothDocumentDirections(): void
     {
-        $invoice = self::run('invoice', 'sent', ['type' => 'expense']);
-        $bill = self::run('bill', 'paid', ['type' => 'income']);
+        $invoice = self::inspectCategory('invoice', 'sent', ['type' => 'expense']);
+        $bill = self::inspectCategory('bill', 'paid', ['type' => 'income']);
         self::assertSame('category_opposite_direction', $invoice[0]->caseKey);
         self::assertSame(Occurrence::SUSPECTED, $invoice[0]->classification);
         self::assertSame('category_opposite_direction', $bill[0]->caseKey);
@@ -36,15 +36,15 @@ final class CategoryIntegrityRuleTest extends TestCase
 
     public function testLegitimateAndExtensionCategoriesAreNotFlagged(): void
     {
-        self::assertSame([], self::run('invoice', 'sent', ['type' => 'income']));
-        self::assertSame([], self::run('bill', 'paid', ['type' => 'expense']));
-        self::assertSame([], self::run('bill', 'paid', ['type' => 'direct_cost']));
-        self::assertSame([], self::run('invoice', 'sent', ['type' => 'custom_type']));
+        self::assertSame([], self::inspectCategory('invoice', 'sent', ['type' => 'income']));
+        self::assertSame([], self::inspectCategory('bill', 'paid', ['type' => 'expense']));
+        self::assertSame([], self::inspectCategory('bill', 'paid', ['type' => 'direct_cost']));
+        self::assertSame([], self::inspectCategory('invoice', 'sent', ['type' => 'custom_type']));
     }
 
     public function testMissingCategoryIsInsufficientEvidenceNotAnError(): void
     {
-        $results = self::run('invoice', 'paid', null);
+        $results = self::inspectCategory('invoice', 'paid', null);
         self::assertCount(1, $results);
         self::assertSame(Occurrence::INSUFFICIENT, $results[0]->classification);
         self::assertSame('info', $results[0]->severity);
@@ -52,8 +52,8 @@ final class CategoryIntegrityRuleTest extends TestCase
 
     public function testDraftAndCancelledDocsAreExcluded(): void
     {
-        self::assertSame([], self::run('invoice', 'draft', ['type' => 'expense']));
-        self::assertSame([], self::run('bill', 'cancelled', ['type' => 'income']));
+        self::assertSame([], self::inspectCategory('invoice', 'draft', ['type' => 'expense']));
+        self::assertSame([], self::inspectCategory('bill', 'cancelled', ['type' => 'income']));
     }
 
     public function testCrossCompanyCategoriesAreRejectedBySnapshot(): void
