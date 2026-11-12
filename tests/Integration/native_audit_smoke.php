@@ -19,6 +19,7 @@ $appDirectory = (string) getenv('AKAUNTING_APP_DIR');
 if ($appDirectory === '' || !is_file($appDirectory . '/bootstrap/app.php')) {
     throw new RuntimeException('Synthetic Akaunting is unavailable.');
 }
+require $appDirectory . '/vendor/autoload.php';
 $app = require $appDirectory . '/bootstrap/app.php';
 $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 if (config('database.connections.mysql.database') !== 'audit_synthetic') {
