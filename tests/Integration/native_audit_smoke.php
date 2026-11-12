@@ -96,6 +96,9 @@ $admin = App\Models\Auth\User::query()->orderBy('id')->first();
 requireCondition($admin !== null, 'Synthetic admin missing.');
 Auth::login($admin);
 App\Models\Common\Company::findOrFail($company1)->makeCurrent();
+// Akaunting's default new company uses USD; the synthetic fixtures use BRL.
+setting()->set('default.currency', 'BRL');
+requireCondition(default_currency() === 'BRL', 'Synthetic currency setup failed.');
 $service = new ReadOnlyAuditService();
 $findings = $service->inspect($company1, 'BRL');
 $cases = array_map(static fn ($f): string => $f->caseKey, $findings['findings']);
