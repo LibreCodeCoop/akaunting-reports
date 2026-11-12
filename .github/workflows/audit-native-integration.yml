@@ -1,0 +1,92 @@
+# SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+# SPDX-License-Identifier: AGPL-3.0-or-later
+name: Native Akaunting audit integration (synthetic)
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/audit-native-integration.yml'
+      - 'Support/Audit/**'
+      - 'Reports/AuditInconsistencies.php'
+      - 'Widgets/AuditInconsistencies.php'
+      - 'Console/InstallAudit.php'
+      - 'tests/Integration/**'
+      - 'module.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: audit-native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: audit-synthetic-only
+          MYSQL_DATABASE: audit_synthetic
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent -h 127.0.0.1 -paudit-synthetic-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=30
+    env:
+      AUDIT_SYNTHETIC_DATABASE: 'yes'
+      AKAUNTING_APP_DIR: /tmp/akaunting
+      COMPOSER_NO_INTERACTION: '1'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
+        with:
+          php-version: '8.3'
+          tools: composer
+          coverage: none
+          extensions: bcmath,ctype,curl,dom,fileinfo,gd,intl,mbstring,mysqli,pdo_mysql,xml,zip
+      - name: Install isolated Akaunting 3.3.0 runtime
+        shell: bash
+        run: |
+          git clone --depth 1 --branch 3.3.0 https://github.com/akaunting/akaunting.git "$AKAUNTING_APP_DIR"
+          cd "$AKAUNTING_APP_DIR"
+          composer install --prefer-dist --no-progress --no-dev --no-scripts
+      - name: Install reviewed module source
+        shell: bash
+        run: |
+          mkdir -p "$AKAUNTING_APP_DIR/modules/AkauntingReports"
+          tar --exclude='.git' --exclude='vendor' --exclude='vendor-bin' \
+              --exclude='tests' --exclude='.github' \
+              -cf - . | tar -xf - -C "$AKAUNTING_APP_DIR/modules/AkauntingReports"
+      - name: Initialize throwaway MySQL database
+        shell: bash
+        run: |
+          cd "$AKAUNTING_APP_DIR"
+          cp .env.example .env
+          sed -i -e 's/^APP_ENV=.*/APP_ENV=local/' \
+                 -e 's/^APP_URL=.*/APP_URL=http:\/\/127.0.0.1:18080/' .env
+          php artisan key:generate --force
+          php artisan install --no-interaction \
+              --db-host=127.0.0.1 --db-port=3306 \
+              --db-name=audit_synthetic --db-username=root \
+              --db-password=audit-synthetic-only --db-prefix= \
+              --company-name="Synthetic Company" \
+              --company-email=synthetic@example.invalid \
+              --admin-email=synthetic-admin@example.invalid \
+              --admin-password=audit-synthetic-only \
+              --locale=en-GB
+      - name: Register audit only in synthetic company
+        shell: bash
+        run: |
+          cd "$AKAUNTING_APP_DIR"
+          php artisan akaunting-reports:install-audit --company=1 --dry-run
+          php artisan akaunting-reports:install-audit --company=1
+      - name: Check native SQL, isolation, ACL and read-only semantics
+        run: php tests/Integration/native_audit_smoke.php
