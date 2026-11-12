@@ -3,7 +3,7 @@
     "description": "Isolated Psalm tooling for Akaunting Reports",
     "type": "project",
     "require-dev": {
-        "vimeo/psalm": "^6.0"
+        "vimeo/psalm": "^7.1"
     },
     "config": {
         "sort-packages": true
