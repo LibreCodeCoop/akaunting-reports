@@ -50,6 +50,21 @@ final class AuditContractTest extends TestCase
         self::assertSame('demo_rule', $catalog->manifest()[0]['id']);
     }
 
+    public function testSameSourceInDifferentCompetencesHasDistinctStableIds(): void
+    {
+        $first = new Occurrence(1, 'demo_rule', 1, Occurrence::SUSPECTED,
+            'warning', 'document', '10', 'review_amount', '2026-01',
+            ['amount_cents' => 1001], 'audit.review_amount', 'audit.review_source');
+        $second = new Occurrence(1, 'demo_rule', 1, Occurrence::SUSPECTED,
+            'warning', 'document', '10', 'review_amount', '2026-02',
+            ['amount_cents' => 1001], 'audit.review_amount', 'audit.review_source');
+        $updated = new Occurrence(1, 'demo_rule', 1, Occurrence::SUSPECTED,
+            'warning', 'document', '10', 'review_amount', '2026-01',
+            ['amount_cents' => 2500], 'audit.review_amount', 'audit.review_source');
+        self::assertNotSame($first->id(), $second->id());
+        self::assertSame($first->id(), $updated->id());
+        self::assertSame(2, Catalog::VERSION);
+    }
     public function testEmptyAndUnavailableSourcesHaveDifferentMeaning(): void
     {
         $empty = new Snapshot(1, 'BRL', ['documents' => ['available' => true, 'rows' => []]]);
