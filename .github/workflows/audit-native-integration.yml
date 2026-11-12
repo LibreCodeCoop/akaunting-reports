@@ -89,4 +89,8 @@ jobs:
           php artisan akaunting-reports:install-audit --company=1 --dry-run
           php artisan akaunting-reports:install-audit --company=1
       - name: Check native SQL, isolation, ACL and read-only semantics
-        run: php tests/Integration/native_audit_smoke.php
+        shell: bash
+        run: |
+          set -o pipefail
+          php tests/Integration/native_audit_smoke.php 2>&1 | tee /tmp/audit-integration.log
+          grep -Fq 'Native Akaunting audit synthetic integration passed:' /tmp/audit-integration.log

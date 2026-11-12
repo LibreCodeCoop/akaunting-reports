@@ -74,6 +74,7 @@ $account = (int) DB::table('accounts')->where('company_id', $company1)->value('i
 requireCondition($account > 0, 'Synthetic default bank account missing.');
 foreach ([$paid => '100.00', $draft => '20.00'] as $id => $amount) {
     DB::table('transactions')->insert([
+        'number' => 'SYNTH-' . $id,
         'company_id' => $company1, 'document_id' => $id, 'type' => 'income',
         'paid_at' => $now, 'amount' => $amount, 'currency_code' => 'BRL',
         'currency_rate' => 1, 'account_id' => $account, 'category_id' => $category1,
