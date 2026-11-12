@@ -89,4 +89,30 @@ final class StatementReconciliationTest extends TestCase
         $this->expectException(InvalidArgumentException::class);
         StatementReconciliation::compare($a, $b, ['3.1' => 'capital']);
     }
+    public function testSnapshotRejectsOverflowInDebitMovement(): void
+    {
+        $invalid = $this->snapshot([$this->account('3.1', PHP_INT_MAX, 1, 0, PHP_INT_MAX)]);
+        $this->expectException(InvalidArgumentException::class);
+        StatementSnapshot::normalize($invalid);
+    }
+
+    public function testMappedAggregationRejectsOverflow(): void
+    {
+        $external = $this->snapshot([
+            $this->account('A', PHP_INT_MAX, 0, 0, PHP_INT_MAX),
+            $this->account('B', 1, 0, 0, 1),
+        ]);
+        $internal = $this->snapshot([$this->account('target', 0, 0, 0, 0)]);
+        $this->expectException(InvalidArgumentException::class);
+        StatementReconciliation::compare($external, $internal, ['A' => 'target', 'B' => 'target']);
+    }
+
+    public function testComparisonDeltaRejectsOverflow(): void
+    {
+        $external = $this->snapshot([$this->account('A', PHP_INT_MAX, 0, 0, PHP_INT_MAX)]);
+        $internal = $this->snapshot([$this->account('target', -1, 0, 0, -1)]);
+        $this->expectException(InvalidArgumentException::class);
+        StatementReconciliation::compare($external, $internal, ['A' => 'target']);
+    }
+
 }
