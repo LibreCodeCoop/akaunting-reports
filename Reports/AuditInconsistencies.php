@@ -195,6 +195,17 @@ final class AuditInconsistencies extends Report
                 return route($route, $occurrence->sourceId);
             }
         }
+        if ($occurrence->source === 'transaction'
+            && user()->can('read-banking-transactions')
+            && Route::has('banking.transactions.show')) {
+            $exists = \Illuminate\Support\Facades\DB::table('transactions')
+                ->where('company_id', $occurrence->companyId)
+                ->whereNull('deleted_at')
+                ->where('id', (int) $occurrence->sourceId)->exists();
+            if ($exists) {
+                return route('banking.transactions.show', $occurrence->sourceId);
+            }
+        }
         return null;
     }
 
@@ -250,6 +261,7 @@ final class AuditInconsistencies extends Report
     {
         return ['all' => trans('akaunting-reports::audit.all'),
             'document' => trans('akaunting-reports::audit.document'),
+            'transaction' => trans('akaunting-reports::audit.transaction'),
             'fiscal_receipt' => trans('akaunting-reports::audit.fiscal_receipt'),
             'source' => trans('akaunting-reports::audit.source_unavailable')];
     }
