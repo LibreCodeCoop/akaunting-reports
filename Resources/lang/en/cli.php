@@ -4,7 +4,7 @@
 
 return [
     'capital_description' => 'Register a read-only member capital report for one company.',
-    'frra_description' => 'Register a read-only annual FRRA report for one company.',
+    'frra_description' => 'Register a read-only annual member reserve report for one company.',
     'invalid_advance' => 'Invalid optional advance identifier.',
     'invalid_capital_options' => 'Provide valid company, category, item and refund-code options.',
     'capital_missing' => 'Company, category or item does not exist in the selected company.',
@@ -17,6 +17,6 @@ return [
     'capital_installed' => 'Member capital report registered for the selected company.',
     'frra_invalid_options' => 'Choose an existing company, two distinct categories, distinct document prefixes and an item name.',
     'frra_categories_missing' => 'Both expense categories must exist in the selected company.',
-    'frra_dry_run' => 'FRRA configuration valid; no database records changed.',
-    'frra_installed' => 'Annual FRRA registered for the selected company; no accounting movements changed.',
+    'frra_dry_run' => 'Annual reserve configuration valid; no database records changed.',
+    'frra_installed' => 'Annual member reserve report registered for the selected company; no accounting movements changed.',
 ];

@@ -4,5 +4,5 @@
 
 return [
     'capital_social' => 'Capital Social',
-    'frra_annual' => 'FRRA Anual',
+    'frra_annual' => 'FRA Anual',
 ];
