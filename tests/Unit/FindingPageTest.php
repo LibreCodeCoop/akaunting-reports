@@ -12,10 +12,12 @@ use PHPUnit\Framework\TestCase;
 
 final class FindingPageTest extends TestCase
 {
-    private static function item(int $id, string $severity = 'warning', string $month = '2026-11'): Occurrence
+    private static function item(
+        int $id, string $severity = 'warning', string $month = '2026-11', string $case = 'paid_shortfall'
+    ): Occurrence
     {
         return new Occurrence(1, 'document_settlement', 1, Occurrence::SUSPECTED, $severity,
-            'document', (string) $id, 'paid_shortfall', $month,
+            'document', (string) $id, $case, $month,
             ['amount_cents' => $id], 'audit.paid_shortfall', 'audit.review_source');
     }
 
@@ -99,6 +101,74 @@ final class FindingPageTest extends TestCase
                 );
             }
         }
+    }
+
+    public function testConfigurableSortPreferenceDefaultsAndAllowList(): void
+    {
+        self::assertSame(['severity', 'asc'], FindingPage::primaryDefaults(null, null));
+        self::assertSame(['competence', 'desc'], FindingPage::secondaryDefaults(null, null));
+        self::assertSame(['rule', 'asc'], FindingPage::tertiaryDefaults(null, null));
+        self::assertSame(['source', 'desc'], FindingPage::primaryDefaults('source', 'DESC'));
+        self::assertSame(['severity', 'asc'], FindingPage::primaryDefaults('company_id', 'invalid'));
+        self::assertSame(['competence', 'desc'], FindingPage::secondaryDefaults([], 'invalid'));
+        self::assertSame(['rule', 'asc'], FindingPage::tertiaryDefaults(false, []));
+    }
+
+    public function testPersistedSecondaryAndTertiaryCriteriaRunBeforePagination(): void
+    {
+        $items = [
+            self::item(7, 'warning', '2026-10', 'alpha'),
+            self::item(4, 'critical', '2025-12', 'alpha'),
+            self::item(10, 'warning', '2026-11', 'zeta'),
+            self::item(6, 'warning', '2026-11', 'alpha'),
+        ];
+        $preferences = [
+            ['column' => 'competence', 'direction' => 'desc'],
+            ['column' => 'rule', 'direction' => 'asc'],
+        ];
+        $first = FindingPage::select($items, [], 1, 2, 'severity', 'asc', $preferences);
+        $second = FindingPage::select(array_reverse($items), [], 2, 2, 'severity', 'asc', $preferences);
+        self::assertSame(['4', '6'], array_map(static fn ($i) => $i->sourceId, $first['rows']));
+        self::assertSame(['10', '7'], array_map(static fn ($i) => $i->sourceId, $second['rows']));
+
+        // Clicking a column header changes the primary column, not saved tie-breakers.
+        $header = FindingPage::select($items, [], 1, 4, 'rule', 'desc', $preferences);
+        self::assertSame(['10', '6', '7', '4'],
+            array_map(static fn ($i) => $i->sourceId, $header['rows']));
+        self::assertSame(
+            array_map(static fn ($i) => $i->id(), $header['rows']),
+            array_map(static fn ($i) => $i->id(), FindingPage::select(
+                array_reverse($items), [], 1, 4, 'rule', 'desc', $preferences
+            )['rows'])
+        );
+    }
+
+    public function testDuplicateSortPreferencesDoNotOverridePrimaryDirection(): void
+    {
+        $items = [
+            self::item(7, 'warning', '2026-10', 'alpha'),
+            self::item(4, 'critical', '2025-12', 'alpha'),
+            self::item(10, 'warning', '2026-11', 'zeta'),
+            self::item(6, 'warning', '2026-11', 'alpha'),
+        ];
+        $sort = FindingPage::select($items, [], 1, 4, 'competence', 'desc', [
+            ['column' => 'competence', 'direction' => 'asc'],
+            ['column' => 'rule', 'direction' => 'asc'],
+        ]);
+        self::assertSame(['6', '10', '7', '4'], array_map(static fn ($i) => $i->sourceId, $sort['rows']));
+    }
+
+    public function testInvalidStoredTieBreakerFallsBackToSafeDefault(): void
+    {
+        $items = [
+            self::item(1, 'warning', '2026-10'),
+            self::item(2, 'warning', '2026-11'),
+        ];
+        $sorted = FindingPage::select($items, [], 1, 50, 'severity', 'asc', [
+            ['column' => 'company_id', 'direction' => 'random'],
+            ['column' => 'source', 'direction' => 'asc'],
+        ]);
+        self::assertSame(['2', '1'], array_map(static fn ($i) => $i->sourceId, $sorted['rows']));
     }
 
     public function testRejectsUnrecognizedSortColumns(): void
