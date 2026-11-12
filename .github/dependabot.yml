@@ -16,6 +16,12 @@ updates:
     directory: /vendor-bin/phpunit
     schedule:
       interval: weekly
+    ignore:
+      # PHPUnit 13 requires PHP >=8.4.1; the root Composer platform is PHP 8.3.
+      # Continue receiving compatible PHPUnit 12.x updates.
+      - dependency-name: phpunit/phpunit
+        versions:
+          - ">=13.0.0"
   - package-ecosystem: composer
     directory: /vendor-bin/psalm
     schedule:
