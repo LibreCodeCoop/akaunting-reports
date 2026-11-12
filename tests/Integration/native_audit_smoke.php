@@ -120,8 +120,18 @@ $report->setViews();
 $report->setData();
 $html = view('akaunting-reports::reports.audit.content', ['class' => $report])->render();
 $visibleCases = array_map(static fn ($f): string => $f->caseKey, $report->visible);
+$probe = [
+    'total_findings' => count($report->findings),
+    'visible' => count($report->visible),
+    'matching' => $report->matching,
+    'filters' => [
+        $report->selectedClassification, $report->selectedSeverity,
+        $report->selectedSource, $report->selectedRule, $report->selectedYear,
+    ],
+    'cases' => array_map(static fn ($f): string => $f->caseKey, $report->findings),
+];
 requireCondition(in_array('draft_with_payment', $visibleCases, true),
-    'Report filters discarded the draft/payment case.');
+    'Report filters discarded the draft/payment case: ' . json_encode($probe));
 requireCondition(in_array('category_opposite_direction', $visibleCases, true),
     'Report filters discarded the category case.');
 requireCondition(str_contains($html, 'document_settlement')
