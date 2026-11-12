@@ -39,3 +39,5 @@ not be fabricated as an invoice to populate the widget.
 The widget is available only to users authorized for both the native capital report and
 the widget; rerun the capital installation command after updating the module to provision
 its widget permission for administrator roles. No financial values are modified.
+
+The widget's report link is scoped to the same company and explicitly retains its as-of date in the native report filter string. It never links to an unrelated company's report or offers to create a report when the configured company has no matching report record.

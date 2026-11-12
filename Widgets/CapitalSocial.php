@@ -24,6 +24,33 @@ final class CapitalSocial extends Widget
     public $report_class = CapitalReport::class;
     public $default_settings = ['width' => '50'];
 
+    /**
+     * Link the exact same company and snapshot date as the widget.
+     * Never fall back to another company's report or to a generic report form.
+     */
+    public function getReportUrl(): string
+    {
+        $companyId = (int) company_id();
+        if ($companyId <= 0 || Widgets::cannotRead(self::class)
+            || Reports::cannotRead(CapitalReport::class)) {
+            return '';
+        }
+
+        $reportId = DB::table('reports')
+            ->where('company_id', $companyId)
+            ->where('class', CapitalReport::class)
+            ->whereNull('deleted_at')
+            ->value('id');
+        if ($reportId === null) {
+            return '';
+        }
+
+        $asOf = Date::today()->toDateString();
+        return route('reports.show', $reportId) . '?' . http_build_query([
+            'search' => 'as_of:' . $asOf . ' view:overview',
+        ]);
+    }
+
     public function show()
     {
         $companyId = (int) company_id();
