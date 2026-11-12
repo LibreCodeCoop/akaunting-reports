@@ -16,7 +16,7 @@ composer test:unit
 composer psalm
 ```
 
-The CI runs separate PHP Syntax, PHPUnit, Psalm Static Analysis and REUSE Compliance workflows. PHP jobs use the lowest minor version allowed by the root `composer.json` PHP constraint, resolved by a shared action. The resolver rejects unsupported constraint syntax instead of silently choosing a different version. Dependency updates are handled through Dependabot for GitHub Actions, Composer and isolated tools.
+The CI runs separate PHP Syntax, PHPUnit, Psalm Static Analysis and REUSE Compliance workflows. PHP jobs use `shivammathur/setup-php`'s built-in version detection from the root `composer.json` (`config.platform.php`, also recorded in `composer.lock`). The root `require.php` declares the compatibility range. Dependency updates are handled through Dependabot for GitHub Actions, Composer and isolated tools.
 
 The pure unit tests cover business invariants (allocation, conflicts, money precision and sorting), not a coverage percentage. Database access and HTTP permissions require integration tests with a disposable Akaunting instance and synthetic data. Static analysis currently covers the framework-independent financial support classes; adapters that depend on the Akaunting runtime are validated by PHP lint and runtime integration.
 
