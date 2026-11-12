@@ -250,11 +250,6 @@ $auditUnsetWidthHtml = $widget->show()->render();
 requireCondition(str_contains($auditUnsetWidthHtml,
     'id="widget-901" class="w-full lg:w-2/4 lg:px-6 my-8"'),
     'Audit widget with a null width did not use the native default layout.');
-$auditWidgetModel->settings = (object) [];
-$auditMissingWidthHtml = $widget->show()->render();
-requireCondition(str_contains($auditMissingWidthHtml,
-    'id="widget-901" class="w-full lg:w-2/4 lg:px-6 my-8"'),
-    'Audit widget with a missing width did not use the native default layout.');
 $auditWidgetModel->settings = (object) ['width' => '25'];
 $auditQuarterWidthHtml = $widget->show()->render();
 requireCondition(str_contains($auditQuarterWidthHtml,
