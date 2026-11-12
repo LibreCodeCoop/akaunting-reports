@@ -53,7 +53,6 @@ final class CapitalAssemblyEvidence
                 $event['allocation_ref'], $event['contact_id'],
             ]);
             $isDuplicate = isset($seen[$key]);
-            $seen[$key] = true;
             $approval = $event['review_state'] ?? null;
             if (!in_array($approval, ['pending_review', 'approved', 'rejected'], true)) {
                 throw new InvalidArgumentException('Unrecognized accounting approval state.');
@@ -70,6 +69,12 @@ final class CapitalAssemblyEvidence
                 : ($approval !== 'approved' ? 'requires_accountant_review'
                 : (!$hasEntry ? 'missing_accounting_entry'
                 : (!$reversalLinked ? 'unverified_reversal' : 'eligible')));
+            // A pending or rejected document must not consume the identity of a
+            // later approved revision of the same allocation. Only an eligible
+            // recognition reserves the key within this batch.
+            if ($reason === 'eligible') {
+                $seen[$key] = true;
+            }
             $decisions[] = [
                 'source_key' => $key,
                 'eligible' => $reason === 'eligible',

@@ -120,6 +120,37 @@ final class CapitalAccountingEvidenceTest extends TestCase
         )[0]['eligible']);
     }
 
+    public function testPendingRevisionDoesNotBlockSubsequentApprovedCorrection(): void
+    {
+        $pending = $this->allocation();
+        $approved = $pending;
+        $approved['source_revision'] = 'v2';
+        $approved['source_sha256'] = str_repeat('f', 64);
+        $approved['review_state'] = 'approved';
+        $approved['accounting_entry_ref'] = 'journal-42';
+
+        $results = CapitalAssemblyEvidence::assess([$pending, $approved], 22);
+        self::assertSame('requires_accountant_review', $results[0]['reason']);
+        self::assertFalse($results[0]['eligible']);
+        self::assertSame('eligible', $results[1]['reason']);
+        self::assertTrue($results[1]['eligible']);
+        self::assertSame($results[0]['source_key'], $results[1]['source_key']);
+    }
+
+    public function testRejectedEarlierRevisionDoesNotBlockApprovedRevision(): void
+    {
+        $rejected = $this->allocation();
+        $rejected['review_state'] = 'rejected';
+        $approved = $rejected;
+        $approved['source_revision'] = 'v2';
+        $approved['review_state'] = 'approved';
+        $approved['accounting_entry_ref'] = 'journal-42';
+
+        $results = CapitalAssemblyEvidence::assess([$rejected, $approved], 22);
+        self::assertFalse($results[0]['eligible']);
+        self::assertTrue($results[1]['eligible']);
+    }
+
     public function testCrossCompanyAllocationIsRejected(): void
     {
         $this->expectException(InvalidArgumentException::class);
