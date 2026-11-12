@@ -27,7 +27,7 @@ final class DocumentSettlementReader
             ->where('company_id', $companyId)->whereNull('deleted_at')
             ->whereIn('type', ['invoice', 'bill'])->where('id', '>', $afterId)
             ->orderBy('id')->limit($limit)
-            ->select('id', 'company_id', 'type', 'status', 'currency_code', 'amount', 'issued_at');
+            ->select('id', 'company_id', 'type', 'status', 'currency_code', 'amount', 'issued_at', 'category_id');
         foreach ($query->get() as $document) {
             $id = (int) $document->id;
             $date = substr((string) ($document->issued_at ?? ''), 0, 7);
@@ -36,6 +36,7 @@ final class DocumentSettlementReader
                 'status' => (string) $document->status,
                 'currency_code' => (string) $document->currency_code,
                 'amount' => (string) $document->amount,
+                'category_id' => (int) ($document->category_id ?? 0),
                 'competence' => preg_match('/^20\d{2}-(0[1-9]|1[0-2])$/D', $date) ? $date : null,
             ];
             $ids[] = $id;
@@ -56,9 +57,27 @@ final class DocumentSettlementReader
             }
         }
 
+        $categories = [];
+        $categoryIds = array_values(array_unique(array_filter(
+            array_column($documents, 'category_id'),
+            static fn (int $id): bool => $id > 0
+        )));
+        if ($categoryIds !== []) {
+            foreach (DB::table('categories')
+                ->where('company_id', $companyId)->whereNull('deleted_at')
+                ->whereIn('id', $categoryIds)->orderBy('id')
+                ->select('id', 'company_id', 'type')->get() as $category) {
+                $categories[] = [
+                    'company_id' => $companyId, 'id' => (int) $category->id,
+                    'type' => (string) $category->type,
+                ];
+            }
+        }
+
         return new Snapshot($companyId, $currencyCode, [
             'documents' => ['available' => true, 'rows' => $documents],
             'transactions' => ['available' => true, 'rows' => $transactions],
+            'categories' => ['available' => true, 'rows' => $categories],
         ]);
     }
 }

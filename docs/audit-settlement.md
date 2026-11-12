@@ -17,6 +17,13 @@ are not, by themselves, irregular. Foreign currency, unsupported payment
 direction, ambiguous reversals or non-cent amounts create an
 **insufficient-evidence** notice, not a proven mismatch.
 
+A separate `category_integrity` rule checks only explicit opposite-direction
+native types: an active invoice categorized as expense, or an active bill
+categorized as income. These are **review signals**, not proven accounting
+errors. Missing/soft-deleted categories produce insufficient evidence, and
+custom extension types are not declared invalid without a verified mapping.
+Categories are read within the same company and document batch.
+
 The source ledger is filtered by company and soft-deletion; the reader fetches
 at most 500 documents per batch, then only the linked transactions for those
 document IDs. Traverse by monotonically increasing document ID, not by offset.
