@@ -15,6 +15,7 @@
     "Modules\\AkauntingReports\\Reports\\AuditInconsistencies"
   ],
   "widgets": [
+    "Modules\\AkauntingReports\\Widgets\\CapitalSocial",
     "Modules\\AkauntingReports\\Widgets\\AuditInconsistencies"
   ],
   "settings": [],
