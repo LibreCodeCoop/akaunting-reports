@@ -115,7 +115,7 @@ final class AuditInconsistencies extends Report
     public function setData(): void
     {
         $companyId = (int) company_id();
-        if ($companyId <= 0 || Reports::cannotRead(self::class)) {
+        if ($companyId <= 0 || user() === null || Reports::cannotRead(self::class)) {
             abort(403);
         }
         $this->selectedClassification = $this->choice('classification', self::classificationOptions());

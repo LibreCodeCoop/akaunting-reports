@@ -21,7 +21,7 @@ final class AuditInconsistencies extends Widget
 
     public function show()
     {
-        if ((int) company_id() <= 0 || Reports::cannotRead(Report::class)) {
+        if ((int) company_id() <= 0 || user() === null || Reports::cannotRead(Report::class)) {
             abort(403);
         }
         $preview = app(ReadOnlyAuditService::class)->inspect((int) company_id(), default_currency(), 500);

@@ -166,6 +166,13 @@ namespace App\Utilities {
 }
 
 namespace {
+    if (!function_exists('user')) {
+        function user(): ?object
+        {
+            return \Modules\AkauntingReports\Tests\Fixtures\FakeAuditRuntime::$denied
+                ? null : (object) ['id' => 1];
+        }
+    }
     if (!function_exists('abort')) {
         function abort(int $code): never
         {
