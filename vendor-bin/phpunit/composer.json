@@ -3,7 +3,7 @@
     "description": "Isolated PHPUnit tooling for Akaunting Reports",
     "type": "project",
     "require-dev": {
-        "phpunit/phpunit": "^13.4"
+        "phpunit/phpunit": "^12.5"
     },
     "config": {
         "sort-packages": true
