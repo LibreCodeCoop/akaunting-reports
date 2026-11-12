@@ -31,7 +31,7 @@ final class CapitalSocial extends Widget
     public function getReportUrl(): string
     {
         $companyId = (int) company_id();
-        if ($companyId <= 0 || Widgets::cannotRead(self::class)
+        if ($companyId <= 0 || user() === null || Widgets::cannotRead(self::class)
             || Reports::cannotRead(CapitalReport::class)) {
             return '';
         }
@@ -54,7 +54,7 @@ final class CapitalSocial extends Widget
     public function show()
     {
         $companyId = (int) company_id();
-        if ($companyId <= 0 || Widgets::cannotRead(self::class)
+        if ($companyId <= 0 || user() === null || Widgets::cannotRead(self::class)
             || Reports::cannotRead(CapitalReport::class)) {
             abort(403);
         }

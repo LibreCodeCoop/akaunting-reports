@@ -217,10 +217,61 @@ $csv = (string) ob_get_clean();
 requireCondition(str_contains($csv, 'document_settlement')
     && str_contains($csv, 'category_integrity'),
     'Native CSV export omitted synthetic financial findings.');
-$widget = new \Modules\AkauntingReports\Widgets\AuditInconsistencies();
+// Render against an actual widget model contract, including native actions and width.
+$makeWidgetModel = static function (string $class, int $id, string $name) use ($company1): App\Models\Common\Widget {
+    $model = new App\Models\Common\Widget();
+    $model->id = $id;
+    $model->company_id = $company1;
+    $model->class = $class;
+    $model->name = $name;
+    $model->settings = (object) ['width' => '50'];
+
+    return $model;
+};
+$auditWidgetModel = $makeWidgetModel(
+    \Modules\AkauntingReports\Widgets\AuditInconsistencies::class, 901, 'Synthetic audit'
+);
+$widget = new \Modules\AkauntingReports\Widgets\AuditInconsistencies($auditWidgetModel);
 $widgetHtml = $widget->show()->render();
 requireCondition(str_contains($widgetHtml, 'By reference month'),
     'Akaunting dashboard widget failed to render its period summary.');
+requireCondition(str_contains($widgetHtml, 'id="widget-901" class="w-full lg:w-2/4 lg:px-6 my-8"')
+    && str_contains($widgetHtml, 'show-more-actions-widget-901')
+    && str_contains($widgetHtml, 'show-more-actions-edit-widget-901'),
+    'Audit widget omitted native sizing or edit/delete menu.');
+requireCondition(str_contains($widgetHtml, route('reports.show', $reportModel->id))
+    && str_contains($widgetHtml, trans('widgets.view_report')),
+    'Audit widget omitted the native link to its own company report.');
+
+// No cross-company fallback should produce a link to this company's report.
+App\Models\Common\Company::findOrFail($company2)->makeCurrent();
+requireCondition($widget->getReportUrl() === '',
+    'Audit widget linked to another company report.');
+App\Models\Common\Company::findOrFail($company1)->makeCurrent();
+
+// The capital widget must be removable even before policy configuration.
+$capitalWidgetModel = $makeWidgetModel(
+    \Modules\AkauntingReports\Widgets\CapitalSocial::class, 902, 'Synthetic capital'
+);
+$capitalWidget = new \Modules\AkauntingReports\Widgets\CapitalSocial($capitalWidgetModel);
+$capitalWidgetHtml = view('akaunting-reports::widgets.capital-social', [
+    'class' => $capitalWidget, 'configured' => false, 'metrics' => null,
+    'asOf' => now()->toDateString(),
+])->render();
+requireCondition(str_contains($capitalWidgetHtml, 'id="widget-902" class="w-full lg:w-2/4 lg:px-6 my-8"')
+    && str_contains($capitalWidgetHtml, 'show-more-actions-widget-902')
+    && str_contains($capitalWidgetHtml, 'show-more-actions-edit-widget-902'),
+    'Unconfigured capital widget omitted native sizing or edit/delete menu.');
+requireCondition(str_contains($capitalWidgetHtml, trans('akaunting-reports::ui.capital_widget_unconfigured')),
+    'Unconfigured capital widget failed to explain its state.');
+$capitalConfiguredHtml = view('akaunting-reports::widgets.capital-social', [
+    'class' => $capitalWidget, 'configured' => true,
+    'metrics' => ['total_cents' => 12345, 'pending_count' => 2, 'warnings_count' => 1],
+    'asOf' => now()->toDateString(),
+])->render();
+requireCondition(str_contains($capitalConfiguredHtml, trans('akaunting-reports::ui.capital_widget_equity_note'))
+    && str_contains($capitalConfiguredHtml, 'show-more-actions-widget-902'),
+    'Configured capital widget lost native actions or financial context.');
 
 // Render actual native Blade content with Akaunting's stylesheet.
 // All data in this isolated preview are synthetic.
@@ -245,6 +296,9 @@ requireCondition(file_put_contents('/tmp/audit-report-preview.html',
     $preview('Financial audit report', $html)) !== false, 'No report preview.');
 requireCondition(file_put_contents('/tmp/audit-widget-preview.html',
     $preview('Financial audit widget', $widgetHtml)) !== false, 'No widget preview.');
+requireCondition(file_put_contents('/tmp/capital-widget-preview.html',
+    $preview('Member capital widget', $capitalConfiguredHtml)) !== false,
+    'No capital widget preview.');
 requireCondition($before === $ledger(), 'Audit changed an accounting document or transaction.');
 
 Auth::logout();
