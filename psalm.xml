@@ -11,6 +11,7 @@
         <ignoreFiles>
             <file name="Support/CapitalSocialLedger.php"/>
             <file name="Support/FrraAnnualLedger.php"/>
+            <file name="Support/Audit/DocumentSettlementReader.php"/>
             <file name="Support/Audit/FiscalReceiptReader.php"/>
             <file name="Support/Audit/FrraIntegrityReader.php"/>
             <file name="Support/Audit/CapitalIntegrityReader.php"/>
