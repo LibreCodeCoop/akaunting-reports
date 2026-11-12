@@ -4,5 +4,6 @@
 
 return [
     'capital_social' => 'Capital Social',
+    'audit_inconsistencies' => 'Auditoria de Inconsistências Financeiras',
     'frra_annual' => 'FRA Anual',
 ];

@@ -1,0 +1,104 @@
+<?php
+// SPDX-FileCopyrightText: 2026 LibreCode coop and contributors
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+declare(strict_types=1);
+
+namespace Modules\AkauntingReports\Support\Audit;
+
+use App\Utilities\Reports;
+use Modules\AkauntingReports\Reports\AuditInconsistencies;
+use InvalidArgumentException;
+
+/**
+ * The only orchestration entry point for the report and widget. Every batch is
+ * company-scoped. Native report ACL is required even for dashboard reads.
+ */
+final class ReadOnlyAuditService
+{
+    /**
+     * @return array{findings:list<Occurrence>,scanned:int,truncated:bool}
+     */
+    public function inspect(int $companyId, string $currency, int $maxDocuments = 10000): array
+    {
+        if ($companyId <= 0 || $maxDocuments < 1 || $maxDocuments > 10000) {
+            throw new InvalidArgumentException('Invalid audit scan request.');
+        }
+        if (user() === null || $companyId !== (int) company_id()
+            || Reports::cannotRead(AuditInconsistencies::class)) {
+            abort(403);
+        }
+
+        $reader = new DocumentSettlementReader();
+        $rules = [new DocumentSettlementRule(), new CategoryIntegrityRule()];
+        $fiscalAvailable = class_exists(FiscalReceiptRule::class)
+            && class_exists(FiscalReceiptReader::class);
+        if ($fiscalAvailable) {
+            $rules[] = new FiscalReceiptRule();
+        }
+        $catalog = new Catalog($rules);
+        $findings = [];
+        $cursor = 0;
+        $scanned = 0;
+
+        while ($scanned < $maxDocuments) {
+            $snapshot = $reader->read($companyId, $currency, $cursor, min(500, $maxDocuments - $scanned));
+            $documents = $snapshot->rows('documents');
+            if ($documents === []) {
+                break;
+            }
+            $ids = array_map(static fn (array $document): int => (int) $document['id'], $documents);
+            $cursor = max($ids);
+            $scanned += count($documents);
+            $sources = [
+                'documents' => ['available' => true, 'rows' => $documents],
+                'transactions' => ['available' => true, 'rows' => $snapshot->rows('transactions')],
+                'categories' => ['available' => true, 'rows' => $snapshot->rows('categories')],
+            ];
+            if ($fiscalAvailable) {
+                $sources['fiscal_receipts'] = (new FiscalReceiptReader())->read($companyId, $ids);
+            }
+            foreach (Engine::evaluate(new Snapshot($companyId, $currency, $sources), $catalog) as $item) {
+                $findings[$item->id()] = $item; // Repeat availability notices only once.
+            }
+        }
+        // Cooperative FRA evidence is optional and global to a competence.
+        // Scan it once, never once per document page, and only with its own
+        // report permission; otherwise treat the source as unavailable.
+        if (class_exists(FrraIntegrityReader::class) && class_exists(FrraIntegrityRule::class)) {
+            $permitted = Reports::canRead(\Modules\AkauntingReports\Reports\FrraAnnual::class);
+            $frra = $permitted
+                ? (new FrraIntegrityReader())->read($companyId, $currency)
+                : ['available' => false, 'rows' => []];
+            foreach (Engine::evaluate(
+                new Snapshot($companyId, $currency, ['frra_entries' => $frra]),
+                new Catalog([new FrraIntegrityRule()])
+            ) as $item) {
+                $findings[$item->id()] = $item;
+            }
+        }
+
+        // Capital review signals require the separately authorized native
+        // capital report. Never expose member-level evidence to audit-only users.
+        if (class_exists(CapitalIntegrityReader::class) && class_exists(CapitalIntegrityRule::class)) {
+            $permitted = Reports::canRead(\Modules\AkauntingReports\Reports\CapitalSocial::class);
+            $capital = $permitted
+                ? (new CapitalIntegrityReader())->read($companyId, $currency)
+                : ['available' => false, 'rows' => []];
+            foreach (Engine::evaluate(
+                new Snapshot($companyId, $currency, ['capital_entries' => $capital]),
+                new Catalog([new CapitalIntegrityRule()])
+            ) as $item) {
+                $findings[$item->id()] = $item;
+            }
+        }
+        $truncated = $scanned >= $maxDocuments &&
+            (new DocumentSettlementReader())->read($companyId, $currency, $cursor, 1)->rows('documents') !== [];
+        ksort($findings, SORT_STRING);
+        return [
+            'findings' => array_values($findings),
+            'scanned' => $scanned,
+            'truncated' => $truncated,
+        ];
+    }
+}
