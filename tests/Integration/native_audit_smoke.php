@@ -95,6 +95,7 @@ $before = $ledger();
 $admin = App\Models\Auth\User::query()->orderBy('id')->first();
 requireCondition($admin !== null, 'Synthetic admin missing.');
 Auth::login($admin);
+App\Models\Common\Company::findOrFail($company1)->makeCurrent();
 $service = new ReadOnlyAuditService();
 $findings = $service->inspect($company1, 'BRL');
 $cases = array_map(static fn ($f): string => $f->caseKey, $findings['findings']);
@@ -102,6 +103,14 @@ requireCondition(in_array('draft_with_payment', $cases, true), 'Draft/payment mi
 requireCondition(in_array('category_opposite_direction', $cases, true), 'Category mismatch missing.');
 requireCondition(!in_array('paid_without_payment', $cases, true),
     'Other-company paid document produced a false alert.');
+$otherCompanyDenied = false;
+try {
+    $service->inspect($company2, 'BRL');
+} catch (Symfony\Component\HttpKernel\Exception\HttpExceptionInterface $exception) {
+    $otherCompanyDenied = $exception->getStatusCode() === 403;
+}
+requireCondition($otherCompanyDenied, 'Active company isolation failed.');
+
 requireCondition($before === $ledger(), 'Audit changed an accounting document or transaction.');
 
 Auth::logout();

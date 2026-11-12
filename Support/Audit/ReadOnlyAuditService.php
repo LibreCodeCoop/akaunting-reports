@@ -24,7 +24,8 @@ final class ReadOnlyAuditService
         if ($companyId <= 0 || $maxDocuments < 1 || $maxDocuments > 10000) {
             throw new InvalidArgumentException('Invalid audit scan request.');
         }
-        if (user() === null || Reports::cannotRead(AuditInconsistencies::class)) {
+        if (user() === null || $companyId !== (int) company_id()
+            || Reports::cannotRead(AuditInconsistencies::class)) {
             abort(403);
         }
 

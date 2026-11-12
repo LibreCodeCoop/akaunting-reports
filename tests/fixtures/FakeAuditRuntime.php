@@ -14,12 +14,14 @@ namespace Modules\AkauntingReports\Tests\Fixtures {
         public static array $tables = [];
         public static int $queries = 0;
         public static bool $denied = false;
+        public static int $activeCompany = 1;
 
         public static function reset(): void
         {
             self::$tables = ['documents' => [], 'transactions' => [], 'nfse_receipts' => []];
             self::$queries = 0;
             self::$denied = false;
+            self::$activeCompany = 1;
         }
     }
 
@@ -166,6 +168,12 @@ namespace App\Utilities {
 }
 
 namespace {
+    if (!function_exists('company_id')) {
+        function company_id(): int
+        {
+            return \Modules\AkauntingReports\Tests\Fixtures\FakeAuditRuntime::$activeCompany;
+        }
+    }
     if (!function_exists('user')) {
         function user(): ?object
         {

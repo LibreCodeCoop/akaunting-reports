@@ -64,6 +64,7 @@ final class ReadOnlyAuditServiceTest extends TestCase
             static fn ($finding): bool => $finding->source === 'document'));
         self::assertSame('paid_shortfall', $one['findings'][0]->caseKey);
 
+        Runtime::$activeCompany = 2;
         $two = $service->inspect(2, 'BRL');
         self::assertSame(1, $two['scanned']);
         self::assertSame([], $two['findings']);
@@ -86,6 +87,7 @@ final class ReadOnlyAuditServiceTest extends TestCase
         self::assertSame(2, $one['scanned']);
         self::assertCount(1, array_filter($one['findings'],
             static fn ($finding): bool => $finding->ruleId === 'category_integrity'));
+        Runtime::$activeCompany = 2;
         $two = (new ReadOnlyAuditService())->inspect(2, 'BRL');
         self::assertSame([], $two['findings']);
     }
@@ -98,6 +100,20 @@ final class ReadOnlyAuditServiceTest extends TestCase
         try {
             (new ReadOnlyAuditService())->inspect(1, 'BRL');
             self::fail('Unauthorized read must not succeed.');
+        } catch (RuntimeException $exception) {
+            self::assertSame(403, $exception->getCode());
+        }
+        self::assertSame(0, Runtime::$queries);
+    }
+
+    #[RunInSeparateProcess]
+    public function testCannotRequestAnotherCompanyWhileAuthenticatedToCurrentOne(): void
+    {
+        self::loadFixture();
+        Runtime::$activeCompany = 1;
+        try {
+            (new ReadOnlyAuditService())->inspect(2, 'BRL');
+            self::fail('Cross-company scans must not be authorized.');
         } catch (RuntimeException $exception) {
             self::assertSame(403, $exception->getCode());
         }
