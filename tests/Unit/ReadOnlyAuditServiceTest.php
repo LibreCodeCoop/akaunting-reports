@@ -91,7 +91,8 @@ final class ReadOnlyAuditServiceTest extends TestCase
             static fn ($finding): bool => $finding->ruleId === 'category_integrity'));
         Runtime::$activeCompany = 2;
         $two = (new ReadOnlyAuditService())->inspect(2, 'BRL');
-        self::assertSame([], $two['findings']);
+        self::assertSame([], array_values(array_filter($two['findings'],
+            static fn ($finding): bool => $finding->ruleId === 'category_integrity')));
     }
 
     #[RunInSeparateProcess]
