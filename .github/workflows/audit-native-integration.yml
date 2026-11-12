@@ -94,3 +94,27 @@ jobs:
           set -o pipefail
           php tests/Integration/native_audit_smoke.php 2>&1 | tee /tmp/audit-integration.log
           grep -Fq 'Native Akaunting audit synthetic integration passed:' /tmp/audit-integration.log
+      - name: Capture native report and widget previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser || true)"
+          test -n "$CHROME"
+          "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --hide-scrollbars --window-size=1500,1100 \
+            --screenshot=/tmp/audit-report.png file:///tmp/audit-report-preview.html
+          "$CHROME" --headless --no-sandbox --disable-gpu --disable-dev-shm-usage \
+            --hide-scrollbars --window-size=1050,700 \
+            --screenshot=/tmp/audit-widget.png file:///tmp/audit-widget-preview.html
+          test -s /tmp/audit-report.png
+          test -s /tmp/audit-widget.png
+          file /tmp/audit-report.png /tmp/audit-widget.png
+      - name: Upload synthetic screenshot evidence
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: audit-synthetic-visual-evidence
+          path: |
+            /tmp/audit-report.png
+            /tmp/audit-widget.png
+          if-no-files-found: error
+          retention-days: 30
