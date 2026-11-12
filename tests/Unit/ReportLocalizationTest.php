@@ -11,6 +11,26 @@ use PHPUnit\Framework\TestCase;
 
 final class ReportLocalizationTest extends TestCase
 {
+    public function testAuditHasLocalizedReportNameAndDescription(): void
+    {
+        $base = dirname(__DIR__, 2) . '/Resources/lang/';
+        $english = require $base . 'en/audit.php';
+        $british = require $base . 'en-GB/audit.php';
+        $portuguese = require $base . 'pt-BR/audit.php';
+        $englishReports = require $base . 'en/reports.php';
+        $portugueseReports = require $base . 'pt-BR/reports.php';
+
+        self::assertNotSame($english['title'], $portuguese['title']);
+        self::assertNotSame($english['description'], $portuguese['description']);
+        self::assertSame('Financial Inconsistency Audit', $englishReports['audit_inconsistencies']);
+        self::assertSame('Auditoria de Inconsistências Financeiras', $portugueseReports['audit_inconsistencies']);
+        foreach (['sort', 'open_source', 'invalid_sort'] as $key) {
+            self::assertArrayHasKey($key, $english);
+            self::assertArrayHasKey($key, $british);
+            self::assertArrayHasKey($key, $portuguese);
+        }
+    }
+
     public function testAnnualReserveHasLocalizedNamesAndExportFilenames(): void
     {
         $base = dirname(__DIR__, 2) . '/Resources/lang/';
