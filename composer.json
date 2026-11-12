@@ -1,0 +1,39 @@
+{
+    "name": "librecodecoop/akaunting-reports",
+    "description": "Native reporting module for Akaunting",
+    "type": "akaunting-module",
+    "license": "AGPL-3.0-or-later",
+    "require": {
+        "php": "^8.3"
+    },
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8"
+    },
+    "autoload": {
+        "psr-4": {
+            "Modules\\AkauntingReports\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\AkauntingReports\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "lint": "find Console Providers Reports Support Resources tests -name '*.php' -print0 | xargs -0 -n1 php -l",
+        "test:unit": "vendor-bin/phpunit/vendor/bin/phpunit --configuration=phpunit.xml --testsuite=Unit",
+        "psalm": "vendor-bin/psalm/vendor/bin/psalm --no-cache"
+    },
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": false,
+            "forward-command": true
+        }
+    }
+}

@@ -15,3 +15,11 @@
 /.phpunit.cache/
 /.idea/
 /.vscode/
+
+# Isolated developer toolchain
+/vendor/
+/vendor-bin/*/vendor/
+/.phpunit.cache/
+/.psalm/
+/build/
+/composer.phar
