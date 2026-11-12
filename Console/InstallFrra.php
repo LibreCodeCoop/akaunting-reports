@@ -20,10 +20,10 @@ final class InstallFrra extends Command
     protected $signature = 'akaunting-reports:install-frra
         {--company= : Existing company ID}
         {--production-category= : Production bill category ID for the company}
-        {--annual-category= : Annual FRRA bill category ID for the company}
+        {--annual-category= : Annual reserve bill category ID for the company}
         {--production-prefix= : Exact prefix of production document numbers}
-        {--annual-prefix= : Exact prefix of annual FRRA document numbers}
-        {--item-name=FRRA : Exact name of the FRRA document item}
+        {--annual-prefix= : Exact prefix of annual reserve document numbers}
+        {--item-name=FRRA : Exact accounting document item name (default: FRRA)}
         {--dry-run : Validate without changing any database records}';
 
     protected $description = '';
@@ -99,7 +99,7 @@ final class InstallFrra extends Command
         // Core Akaunting's standard new-report permission, admin roles only.
         $permission = $this->createPermission(
             Reports::getPermission(FrraAnnual::class),
-            'Read Akaunting Reports FRRA Annual'
+            trans('akaunting-reports::ui.frra_permission')
         );
         $this->attachPermissionsToAdminRoles([$permission]);
 

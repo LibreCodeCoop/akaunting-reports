@@ -14,7 +14,7 @@ use Modules\AkauntingReports\Support\FrraAnnualMatrix;
 use Modules\AkauntingReports\Support\FrraAnnualSorter;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-/** Annual FRRA retained by member and competence, independent of payment date. */
+/** Annual member reserve by member and competence, independent of payment date. */
 final class FrraAnnual extends Report
 {
     public $default_name = 'akaunting-reports::reports.frra_annual';
@@ -113,7 +113,7 @@ final class FrraAnnual extends Report
     {
         $company = (int) company_id();
         if ($company <= 0) {
-            throw new \RuntimeException('A company context is required for FRRA reporting.');
+            throw new \RuntimeException('A company context is required for annual reserve reporting.');
         }
         $this->selectedYear = $this->requestedYear();
         $rawMember = $this->getSearchStringValue('member');
@@ -224,7 +224,7 @@ final class FrraAnnual extends Report
             $totals[] = self::decimal($this->summary['annual_cents']);
             fputcsv($out, $totals);
             fclose($out);
-        }, 'frra-anual-' . $this->selectedYear . '.csv',
+        }, trans('akaunting-reports::ui.frra_export_filename') . '-' . $this->selectedYear . '.csv',
         ['Content-Type' => 'text/csv; charset=UTF-8']);
     }
 

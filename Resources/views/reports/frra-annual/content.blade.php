@@ -3,7 +3,7 @@
 <div class="space-y-5">
     <div class="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-            <h3 class="text-xl font-semibold text-black">FRRA · {{ $class->selectedYear }}</h3>
+            <h3 class="text-xl font-semibold text-black">{{ trans('akaunting-reports::ui.frra_annual') }} · {{ $class->selectedYear }}</h3>
             <p class="mt-1 text-sm text-gray-500">
                 {{ trans('akaunting-reports::ui.frra_intro_first') }}
                 {{ trans('akaunting-reports::ui.total_no_pay') }}

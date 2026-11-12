@@ -1,9 +1,9 @@
 {{-- SPDX-FileCopyrightText: 2026 LibreCode coop and contributors --}}
 {{-- SPDX-License-Identifier: AGPL-3.0-or-later --}}
 <x-layouts.print>
-    <x-slot name="title">{{ $class->model->name }} · {{ $class->selectedYear }}</x-slot>
+    <x-slot name="title">{{ trans('akaunting-reports::ui.frra_annual') }} · {{ $class->selectedYear }}</x-slot>
     <x-slot name="content">
-        <h2>{{ $class->model->name }} · {{ $class->selectedYear }}</h2>
+        <h2>{{ trans('akaunting-reports::ui.frra_annual') }} · {{ $class->selectedYear }}</h2>
         <p>{{ trans('akaunting-reports::ui.frra_print_intro') }}</p>
         @if ($class->configurationError)
             <p>{{ $class->configurationError }}</p>
