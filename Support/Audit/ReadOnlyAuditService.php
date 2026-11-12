@@ -62,7 +62,7 @@ final class ReadOnlyAuditService
                 $findings[$item->id()] = $item; // Repeat availability notices only once.
             }
         }
-        // Cooperative FRA evidence is optional and global to a competence.
+        // Cooperative FRRA evidence is optional and global to a competence.
         // Scan it once, never once per document page, and only with its own
         // report permission; otherwise treat the source as unavailable.
         if (class_exists(FrraIntegrityReader::class) && class_exists(FrraIntegrityRule::class)) {

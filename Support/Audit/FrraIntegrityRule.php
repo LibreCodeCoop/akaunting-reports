@@ -6,7 +6,7 @@ declare(strict_types=1);
 
 namespace Modules\AkauntingReports\Support\Audit;
 
-/** Conservative comparison by actual FRA competence, not bank settlement. */
+/** Conservative comparison by actual FRRA competence, not bank settlement. */
 final class FrraIntegrityRule implements Rule
 {
     #[\Override]

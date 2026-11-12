@@ -86,7 +86,7 @@ if (getenv('AUDIT_FULL_STACK') === 'yes') {
     requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\FiscalReceiptRule::class),
         'Optional fiscal rule was not composed in the fixture.');
     requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\FrraIntegrityRule::class),
-        'Optional FRA rule was not composed in the fixture.');
+        'Optional FRRA rule was not composed in the fixture.');
     requireCondition(class_exists(\Modules\AkauntingReports\Support\Audit\CapitalIntegrityRule::class),
         'Optional capital rule was not composed in the fixture.');
     requireCondition(\Modules\AkauntingReports\Support\Audit\Catalog::VERSION === 2,

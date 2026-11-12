@@ -9,14 +9,14 @@ namespace Modules\AkauntingReports\Support\Audit;
 use Illuminate\Support\Facades\DB;
 use Modules\AkauntingReports\Support\FrraAnnualLedger;
 
-/** Read-only adapter to the configured FRA Annual source. */
+/** Read-only adapter to the configured FRRA Annual source. */
 final class FrraIntegrityReader
 {
     /** @return array{available:bool,rows:list<array<string,mixed>>} */
     public function read(int $companyId, string $currencyCode): array
     {
         if ($companyId <= 0 || preg_match('/^[A-Z]{3}$/D', $currencyCode) !== 1) {
-            throw new \InvalidArgumentException('Invalid FRA audit context.');
+            throw new \InvalidArgumentException('Invalid FRRA audit context.');
         }
         $prefix = 'akaunting-reports.frra.';
         $keys = [
@@ -42,7 +42,7 @@ final class FrraIntegrityReader
             return ['available' => false, 'rows' => []];
         }
 
-        // Reuse verified company-scoped FRA source; project only opaque IDs and cents.
+        // Reuse verified company-scoped FRRA source; project only opaque IDs and cents.
         $ledger = FrraAnnualLedger::read($companyId, $policy);
         $rows = [];
         foreach ($ledger['entries'] as $item) {
