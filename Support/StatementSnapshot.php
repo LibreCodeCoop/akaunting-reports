@@ -72,7 +72,10 @@ final class StatementSnapshot
             if ($account['debit_cents'] < 0 || $account['credit_cents'] < 0) {
                 throw new \InvalidArgumentException('Debits and credits cannot be negative.');
             }
-            $expected = $account['opening_cents'] + $account['debit_cents'] - $account['credit_cents'];
+            $expected = CheckedCents::subtract(
+                CheckedCents::add($account['opening_cents'], $account['debit_cents']),
+                $account['credit_cents']
+            );
             if ($expected !== $account['closing_cents']) {
                 throw new \InvalidArgumentException("Unbalanced account: {$code}");
             }
