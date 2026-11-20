@@ -6,7 +6,9 @@ declare(strict_types=1);
 
 namespace Modules\AkauntingReports\Support\Audit;
 
+use Modules\AkauntingReports\Support\CheckedCents;
 use Modules\AkauntingReports\Support\Money;
+use InvalidArgumentException;
 use UnexpectedValueException;
 
 /**
@@ -89,7 +91,12 @@ final class DocumentSettlementRule implements Rule
                     $unsupported = true;
                     continue;
                 }
-                $paid += $amount;
+                try {
+                    $paid = CheckedCents::add($paid, $amount);
+                } catch (InvalidArgumentException) {
+                    $unsupported = true;
+                    continue;
+                }
                 ++$valid;
             }
             if ($unsupported) {

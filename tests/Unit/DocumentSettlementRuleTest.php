@@ -76,6 +76,15 @@ final class DocumentSettlementRuleTest extends TestCase
             ['amount' => '10.02']])[0]->caseKey);
     }
 
+    public function testLinkedPaymentSumOverflowIsInsufficientEvidence(): void
+    {
+        $payments = array_fill(0, 11, ['amount' => '9000000000000000.00']);
+        $found = self::inspect('paid', '9000000000000000.00', $payments);
+        self::assertCount(1, $found);
+        self::assertSame('unsupported_payments', $found[0]->caseKey);
+        self::assertSame(Occurrence::INSUFFICIENT, $found[0]->classification);
+    }
+
     public function testBadCurrencyAndInvalidFinancialPrecisionCannotConfirmMismatch(): void
     {
         self::assertSame(Occurrence::INSUFFICIENT,
